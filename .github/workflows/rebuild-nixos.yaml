@@ -14,30 +14,30 @@ jobs:
     strategy:
       max-parallel: 3
       matrix:
-        host: ["homelab-0", "homelab-1", "homelab-2"]
+        host: ["homelab-0"]
     name: Build
     runs-on: self-hosted
     steps:
-      - uses: appleboy/ssh-action@v1.2.0
+      - uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ matrix.host }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.KEY }}
-          script: nixos-rebuild build --flake "github:zwolsman/homelab?dir=nixos&rev=${{github.sha}}#$(hostname)"
+          script: nixos-rebuild build --flake "github:thomvandevin/homelab?dir=nixos&rev=${{github.sha}}#$(hostname)"
 
   switch:
     strategy:
       max-parallel: 1
       matrix:
-        host: ["homelab-0", "homelab-1", "homelab-2"]
+        host: ["homelab-0"]
     needs: [build]
     runs-on: self-hosted
     environment: live
     name: Switch
     steps:
-      - uses: appleboy/ssh-action@v1.2.0
+      - uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ matrix.host }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.KEY }}
-          script: echo ${{ secrets.SU_PWD }} | sudo -S nixos-rebuild switch --flake "github:zwolsman/homelab?dir=nixos&rev=${{github.sha}}#$(hostname)"
+          script: echo ${{ secrets.SU_PWD }} | sudo -S nixos-rebuild switch --flake "github:thomvandevin/homelab?dir=nixos&rev=${{github.sha}}#$(hostname)"
