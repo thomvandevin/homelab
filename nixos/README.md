@@ -21,7 +21,7 @@ $ sudo nixos-rebuild switch --flake "github:thomvandevin/homelab?dir=nixos#homel
 Start colima container with rosetta virtualisation
 
 ```sh
-$ colima start --profile vm --vm-type=vz --vz-rosetta
+$ colima start --profile vm --vm-type=vz --vz-rosetta --memory 8
 ```
 
 Run `nix` commands with `./inside-docker <command>` using the specified docker host (vm)
