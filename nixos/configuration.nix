@@ -110,11 +110,24 @@
       nano
     ];
     # Created using mkpasswd
-    hashedPassword = "$y$j9T$s0hofXXtqSw/2xvrPMmIK/$a1C0/Ao4WM6LJtHEHlmCERMJ03oj9Y9kQJRYTfg4xP0";
+    hashedPassword = "$y$j9T$m3gQb5oHdbq87LmiRnsIE/$v6d3ddYMfyEg.UDGIg0UtSZM.QBotTuDU/Sp8rbDsO6";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL0dyepv7Mynvj4EqLWfM0DtAz20ZI8+AfU/qhHiAsXP thomvandevin@thomvandevin-macbook.local"
     ];
   };
+
+  # dont require password for homelab user
+  # security.sudo.extraRules = [
+  #   {
+  #     users = [ "homelab" ];
+  #     commands = [
+  #       {
+  #         command = "ALL";
+  #         options = [ "NOPASSWD" ];
+  #       }
+  #     ];
+  #   }
+  # ];
 
   # nixos-anywhere fix
   security.sudo.wheelNeedsPassword = false;
