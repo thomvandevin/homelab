@@ -116,19 +116,6 @@
     ];
   };
 
-  # dont require password for homelab user
-  # security.sudo.extraRules = [
-  #   {
-  #     users = [ "homelab" ];
-  #     commands = [
-  #       {
-  #         command = "ALL";
-  #         options = [ "NOPASSWD" ];
-  #       }
-  #     ];
-  #   }
-  # ];
-
   # nixos-anywhere fix
   security.sudo.wheelNeedsPassword = false;
 
