@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+# Set variables
+RUNNER_VERSION="2.323.0"
+RUNNER_FILE="actions-runner-osx-arm64-${RUNNER_VERSION}.tar.gz"
+RUNNER_HASH="845f98d74a3eab5d0bb80517b08bfd1fb162eec5d8f302e175addc4153b35f29"
+RUNNER_DIR=".github/self-hosted-runner"
+GITHUB_URL="https://github.com/thomvandevin/homelab"
+GITHUB_TOKEN="***REMOVED***"
+
+# Ensure we're in the root directory of the repository
+if [ ! -d ".git" ]; then
+    echo "Error: Please run this script from the root of your repository"
+    exit 1
+fi
+
+# Create runner directory and .gitignore entry
+mkdir -p "$RUNNER_DIR"
+if ! grep -q "^$RUNNER_DIR/$" .gitignore 2>/dev/null; then
+    echo "$RUNNER_DIR/" >>.gitignore
+    echo "Added $RUNNER_DIR to .gitignore"
+fi
+
+# Change to runner directory
+cd "$RUNNER_DIR" || exit 1
+
+# Clean up old files if they exist
+if [ -f "$RUNNER_FILE" ]; then
+    echo "Cleaning up old runner files..."
+    rm -f "$RUNNER_FILE"
+    rm -rf bin config run.sh config.sh
+fi
+
+# Download the runner
+echo "Downloading runner package..."
+curl -o "$RUNNER_FILE" -L "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${RUNNER_FILE}"
+
+# Validate hash
+echo "Validating hash..."
+echo "$RUNNER_HASH  $RUNNER_FILE" | shasum -a 256 -c
+
+if [ $? -ne 0 ]; then
+    echo "Error: Hash validation failed"
+    rm -f "$RUNNER_FILE"
+    exit 1
+fi
+
+# Extract the runner
+echo "Extracting runner..."
+tar xzf "$RUNNER_FILE"
+
+# Configure the runner if it hasn't been configured
+if [ ! -f ".runner" ]; then
+    echo "Configuring runner..."
+    ./config.sh --url "$GITHUB_URL" --token "$GITHUB_TOKEN" --unattended
+fi
+
+# Start the runner
+echo "Starting runner..."
+./run.sh
