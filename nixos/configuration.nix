@@ -116,18 +116,19 @@
     ];
   };
 
-  # dont require password for homelab user
-  # security.sudo.extraRules = [
-  #   {
-  #     users = [ "homelab" ];
-  #     commands = [
-  #       {
-  #         command = "ALL";
-  #         options = [ "NOPASSWD" ];
-  #       }
-  #     ];
-  #   }
-  # ];
+  # Define a user account for GitHub runner
+  users.users.github = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+    packages = with pkgs; [
+
+    ];
+    # Created using mkpasswd
+    hashedPassword = "$y$j9T$cg.sS1V5bCuCmwBxbv51V1$UY0HU0pZQ2UKA.FJtb3FK4Hk3OwSBPjwO8r0aqGKv/1";
+    openssh.authorizedKeys.keys = [
+      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDUniQG2A2RLUqANeJl17uN5tHI0YVKFlDZWYB3TrIWh9OIQyFPiL1py2qP4J5Fzf1n/OpAr2T65ZCzqI6/N+dCcwfkkKMJzxe6AT7Ol7sigUUAFMm4u4Rc5BE9MqYU4lCM2oriYWUAyERbnbvUSG+Zxa1PHQGAo7MvMBPOFbePIIIwqxOK6fn+GgMxL8UrDGUfMuh0TMR4bmcnoruEC7lzmjg7oFyOl2XGHtqZHluOLp3fKel8g8go+0OaK6GuqbZewq11P0p/vxu/yOYt/oSPAqhMwahn+HhCncqlU1mj7Hq7X6y8iRCqFyDruUs4RpL+oNml1Wlpg9KAeS5/mCaVPXGz8X35UYEHoG2/c6tf9q+NTMrUnygQiNWBdjuBx9ljW4ii7xpF9t2oeTbcIdfihNGbJf6pJHDW7l/pOKvReBlkIYjo/7ClZvHrCXlKC/+3vkhPF5YfOwGHiZiAjlvGtZCQJlHW/nio6qDUQDoPLDsczqs7Q8ep0nAlWVuhM/B9syJ0ZCkUBsh+oL4dCAK2SGRH3li54ymA17Yd5z5ruowY/CtHmMVEzMwfeZHvqytFA35rniK5PD1M6Xu65lmVZQjpZLyaBA4khoJB2T9OW9mV9vqSwowgolMXN1yiEZk8QsQkQ9cLl7R9MT4EvSK2m5pME+Qps2t9aKwyGlgiuw== thomvandevin@thomvandevin-macbook.local"
+    ];
+  };
 
   # nixos-anywhere fix
   security.sudo.wheelNeedsPassword = false;
