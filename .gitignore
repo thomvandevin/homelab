@@ -1,3 +1,4 @@
-secrets.yaml.dec
+.env
 .idea
+secrets.yaml.dec
 .github/self-hosted-runner/
