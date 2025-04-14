@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudflare-tunnel
+  namespace: argocd
+spec:
+  project: default
+  syncPolicy:
+    automated:
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
+  source:
+    repoURL: https://cloudflare.github.io/helm-charts
+    chart: cloudflare-tunnel
+    targetRevision: 0.3.2
+    helm:
+      valuesObject:
+        cloudflare:
+          tunnelName: "homelab"
+          tunnelId: "f7985844-115e-4ef9-8be0-9c5f6b51c5b1"
+          secretName: "tunnel-credentials"
+          ingress:
+            - hostname: "homelab.thomvandev.in"
+              service: http://echo-svc.echo.svc.cluster.local
+  destination:
+    namespace: cloudflare-tunnel
+    server: https://kubernetes.default.svc
