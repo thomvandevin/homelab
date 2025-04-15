@@ -97,6 +97,11 @@
     clusterInit = (meta.hostname == "homelab-0");
   };
 
+  services.openiscsi = {
+    enable = true;
+    name = "iqn.2016-04.com.open-iscsi:${meta.hostname}";
+  };
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.homelab = {
     isNormalUser = true;
