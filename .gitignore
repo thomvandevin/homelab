@@ -2,3 +2,5 @@
 .idea
 secrets.yaml.dec
 .github/self-hosted-runner/
+backup
+key.asc
