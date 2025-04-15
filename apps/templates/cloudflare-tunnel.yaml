@@ -18,7 +18,7 @@ spec:
       valuesObject:
         cloudflare:
           tunnelName: "homelab"
-          tunnelId: "f7985844-115e-4ef9-8be0-9c5f6b51c5b1"
+          tunnelId: "8ea8da25-8b7a-4b64-b3e5-b3624680679c"
           secretName: "tunnel-credentials"
           ingress:
             - hostname: "homelab.thomvandev.in"
