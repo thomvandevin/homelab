@@ -7,7 +7,7 @@ spec:
   project: default
 
   source:
-    repoURL: git@gitlab.com/thomvandevin/cavempt-scraper.git
+    repoURL: https://gitlab.com/thomvandevin/cavempt-scraper
     targetRevision: HEAD
     path: helm
 
