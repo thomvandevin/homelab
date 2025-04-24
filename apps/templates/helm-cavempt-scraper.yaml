@@ -7,13 +7,19 @@ spec:
   project: default
 
   source:
-    repoURL: https://gitlab.com/thomvandevin/cavempt-scraper
+    repoURL: git@gitlab.com/thomvandevin/cavempt-scraper.git
     targetRevision: HEAD
     path: helm
 
     helm:
-      valueFiles:
-        - values.yaml
+      valuesObject:
+        grafana:
+          ingress:
+            enabled: true
+            ingressClassName: tailscale
+            tls:
+              - hosts:
+                  - "grafana"
 
   destination:
     server: https://kubernetes.default.svc
