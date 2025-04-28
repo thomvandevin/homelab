@@ -43,7 +43,7 @@ metadata:
   name: cavempt-scraper-gcr-key
   namespace: cavempt-scraper
 data:
-  .dockerconfigjson: {{ .Values.gcr.cavempt-scraper }}
+  .dockerconfigjson: {{ .Values.gcr.cavempt-scraper | quote }}
 ---
 apiVersion: v1
 kind: Service
