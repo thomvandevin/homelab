@@ -23,6 +23,8 @@ spec:
           ingress:
             - hostname: "homelab.thomvandev.in"
               service: http://echo-svc.echo.svc.cluster.local
+            - hostname: "cavempt.thomvandev.in"
+              service: http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local
   destination:
     namespace: cloudflare-tunnel
     server: https://kubernetes.default.svc

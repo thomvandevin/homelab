@@ -1,30 +1,30 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: echo
+  name: cavempt-scraper
   labels:
-    name: echo
+    name: cavempt-scraper
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: echo-deployment
-  namespace: echo
-  labels:
-    app: echo
+  name: cavempt-scraper
+  namespace: cavempt-scraper
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: echo
+      app: cavempt-scraper
   template:
     metadata:
       labels:
-        app: echo
+        app: cavempt-scraper
     spec:
+      imagePullSecrets:
+        - name: cavempt-scraper-gcr-key
       containers:
-        - name: echo
-          image: mendhak/http-https-echo:36@sha256:43bdfe52abc5baed00706337efe26825c86360c6b9b74659a72a9aa2fca8bd55
+        - name: cavempt-scraper
+          image: gcr.io/cavempt-scraper/cavempt-scraper
           ports:
             - containerPort: 8080
             - containerPort: 8443
@@ -37,14 +37,23 @@ spec:
               memory: 128Mi
 ---
 apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: cavempt-scraper-gcr-key
+  namespace: cavempt-scraper
+data:
+  .dockerconfigjson: {{ .Values.gcr.cavempt-scraper }}
+---
+apiVersion: v1
 kind: Service
 metadata:
-  name: echo-svc
-  namespace: echo
+  name: cavempt-scraper-svc
+  namespace: cavempt-scraper
 spec:
   type: ClusterIP
   selector:
-    app: echo
+    app: cavempt-scraper
   ports:
     - name: http
       port: 80
