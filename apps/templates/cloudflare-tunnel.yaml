@@ -24,9 +24,11 @@ spec:
             - hostname: "homelab.thomvandev.in"
               service: http://echo-svc.echo.svc.cluster.local
             - hostname: "cavempt.thomvandev.in"
-              service: http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/cavempt
+              service: http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local
+              path: "/cavempt"
             - hostname: "pokebeach.thomvandev.in"
-              service: http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/pokebeach/rss
+              service: http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local
+              path: "/pokebeach/rss"
   destination:
     namespace: cloudflare-tunnel
     server: https://kubernetes.default.svc
