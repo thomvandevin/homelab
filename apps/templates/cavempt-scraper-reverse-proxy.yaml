@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: cavempt-scraper
+data:
+  default.conf: |
+    server {
+        listen 80;
+
+        location /cavempt {
+            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/cavempt;
+        }
+
+        location /pokebeach/rss {
+            proxy_pass http://pokebeach-svc.pokebeach.svc.cluster.local/pokebeach/rss;
+        }
+
+        location / {
+            return 404;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-reverse-proxy
+  namespace: cavempt-scraper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-reverse-proxy
+  template:
+    metadata:
+      labels:
+        app: nginx-reverse-proxy
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-reverse-proxy
+  namespace: cavempt-scraper
+spec:
+  selector:
+    app: nginx-reverse-proxy
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
