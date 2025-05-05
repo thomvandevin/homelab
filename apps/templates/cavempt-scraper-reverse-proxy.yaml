@@ -7,17 +7,19 @@ data:
   default.conf: |
     server {
         listen 80;
-
-        location /cavempt {
-            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/cavempt;
-        }
-
-        location /pokebeach/rss {
-            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/pokebeach/rss;
-        }
+        server_name cavempt.thomvandev.in;
 
         location / {
-            return 404;
+            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/cavempt;;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name pokebeach.thomvandev.in;
+
+        location / {
+            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/pokebeach/rss;
         }
     }
 ---
