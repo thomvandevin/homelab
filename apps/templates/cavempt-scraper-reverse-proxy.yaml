@@ -10,7 +10,7 @@ data:
         server_name cavempt.thomvandev.in;
 
         location / {
-            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/cavempt;;
+            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/cavempt;
         }
     }
 
