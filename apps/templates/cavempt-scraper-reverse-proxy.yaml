@@ -13,7 +13,7 @@ data:
         }
 
         location /pokebeach/rss {
-            proxy_pass http://pokebeach-svc.pokebeach.svc.cluster.local/pokebeach/rss;
+            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/pokebeach/rss;
         }
 
         location / {
