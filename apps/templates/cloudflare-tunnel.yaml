@@ -31,7 +31,7 @@ spec:
               service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
                 httpHostHeader: pokebeach.thomvandev.in
-            - hostname: "swissrounds.thomvandev.in"
+            - hostname: "swissrounds.app"
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
   destination:
     namespace: cloudflare-tunnel
