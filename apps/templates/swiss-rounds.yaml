@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: swiss-rounds
+  labels:
+    name: swiss-rounds
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swiss-rounds
+  namespace: swiss-rounds
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swiss-rounds
+  template:
+    metadata:
+      labels:
+        app: swiss-rounds
+    spec:
+      imagePullSecrets:
+        - name: swiss-rounds-gcr-key
+      containers:
+        - name: swiss-rounds
+          image: gcr.io/swiss-rounds/swiss-rounds
+          ports:
+            - containerPort: 8080
+            - containerPort: 8443
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: swiss-rounds-gcr-key
+  namespace: swiss-rounds
+data:
+  .dockerconfigjson: {{ .Values.gcr.swiss_rounds | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swiss-rounds-svc
+  namespace: swiss-rounds
+spec:
+  type: ClusterIP
+  selector:
+    app: swiss-rounds
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: https
+      port: 443
+      targetPort: 8443
