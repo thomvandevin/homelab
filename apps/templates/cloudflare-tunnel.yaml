@@ -24,11 +24,11 @@ spec:
             - hostname: "homelab.thomvandev.in"
               service: http://echo-svc.echo.svc.cluster.local
             - hostname: "cavempt.thomvandev.in"
-              service: http://nginx-reverse-proxy.cavempt-scraper.svc.cluster.local
+              service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
                 httpHostHeader: cavempt.thomvandev.in
             - hostname: "pokebeach.thomvandev.in"
-              service: http://nginx-reverse-proxy.cavempt-scraper.svc.cluster.local
+              service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
                 httpHostHeader: pokebeach.thomvandev.in
   destination:
