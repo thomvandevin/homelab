@@ -33,6 +33,8 @@ spec:
                 httpHostHeader: pokebeach.thomvandev.in
             - hostname: "swissrounds.app"
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
+            - hostname: "*.swissrounds.app"
+              service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
   destination:
     namespace: cloudflare-tunnel
     server: https://kubernetes.default.svc
