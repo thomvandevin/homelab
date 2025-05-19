@@ -13,7 +13,7 @@ spec:
   source:
     repoURL: https://argoproj.github.io/argo-helm
     chart: argo-cd
-    targetRevision: 8.0.4
+    targetRevision: 7.9.1
     helm:
       valuesObject:
         global:
@@ -25,7 +25,6 @@ spec:
           cm:
             helm.valuesFileSchemes: >-
               secrets+gpg-import, secrets+gpg-import-kubernetes, secrets+age-import, secrets+age-import-kubernetes, secrets, secrets+literal, https
-
 
         repoServer:
           env:
@@ -54,11 +53,14 @@ spec:
               value: "true"
             - name: HELM_SECRETS_HELM_PATH
               value: /usr/local/bin/helm
+
             - name: HELM_SECRETS_LOAD_GPG_KEYS
+              # Multiple keys can be separated by space
               value: /helm-secrets-private-keys/key.asc
           volumes:
             - name: gitops-tools
               emptyDir: {}
+            # kubectl create secret generic helm-secrets-private-keys --from-file=key.asc=assets/gpg/private2.gpg
             - name: helm-secrets-private-keys
               secret:
                 secretName: helm-secrets-private-keys
@@ -72,12 +74,12 @@ spec:
               name: helm-secrets-private-keys
           initContainers:
             - name: download-tools
-              image: alpine:latest@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c
+              image: alpine:latest
               imagePullPolicy: IfNotPresent
               command: [sh, -ec]
               env:
                 - name: HELM_SECRETS_VERSION
-                  value: "4.6.2"
+                  value: "4.6.4"
                 - name: KUBECTL_VERSION
                   value: "1.30.2"
                 - name: VALS_VERSION
@@ -108,6 +110,7 @@ spec:
               enabled: true
               additionalLabels:
                 release: prometheus
+
         server:
           ingress:
             enabled: true
