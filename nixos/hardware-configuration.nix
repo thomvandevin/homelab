@@ -20,9 +20,13 @@
     "usb_storage"
     "usbhid"
     "sd_mod"
+    "dm_crypt"
   ];
   boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-intel" ];
+  boot.kernelModules = [ 
+    "kvm-intel"
+    "dm_crypt"
+  ];
   boot.extraModulePackages = [ ];
   swapDevices = [ ];
 
