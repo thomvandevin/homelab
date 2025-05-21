@@ -1,6 +1,6 @@
 # Edit this configuration file to define what should be installed on
 # your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
+# and in the NixOS manual (accessible by running 'nixos-help').
 
 {
   config,
@@ -64,6 +64,9 @@
   # Fixes for longhorn
   systemd.tmpfiles.rules = [
     "L+ /usr/local/bin - - - - /run/current-system/sw/bin/"
+    "d /var/lib/rancher/k3s/storage 0755 root root -"
+    "d /var/lib/rancher/k3s/agent 0755 root root -"
+    "d /var/lib/rancher/k3s/server 0755 root root -"
   ];
   virtualisation.docker.logDriver = "json-file";
 
@@ -83,7 +86,8 @@
         "--cluster-init"
         "--disable servicelb"
         "--disable traefik"
-        "--disable local-storage"
+        "--kubelet-arg=root-dir=/var/lib/rancher/k3s/agent"
+        "--kubelet-arg=container-runtime-endpoint=unix:///run/k3s/containerd/containerd.sock"
       ]
       ++ (
         if meta.hostname == "homelab-0" then
@@ -102,7 +106,7 @@
     name = "iqn.2016-04.com.open-iscsi:${meta.hostname}";
   };
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
+  # Define a user account. Don't forget to set a password with 'passwd'.
   users.users.homelab = {
     isNormalUser = true;
     description = "homelab";
@@ -125,7 +129,7 @@
   # Define a user account for GitHub runner
   users.users.github = {
     isNormalUser = true;
-    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "wheel" ]; # Enable 'sudo' for the user.
     packages = with pkgs; [
 
     ];
@@ -217,7 +221,7 @@
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
+  # on your system were taken. It's perfectly fine and recommended to leave
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
