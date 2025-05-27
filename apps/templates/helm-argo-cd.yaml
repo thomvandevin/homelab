@@ -67,7 +67,8 @@ spec:
           volumeMounts:
             - mountPath: /gitops-tools
               name: gitops-tools
-            - mountPath: /usr/local/sbin
+            - mountPath: /usr/local/sbin/helm
+              subPath: helm
               name: gitops-tools
             - mountPath: /helm-secrets-private-keys/
               name: helm-secrets-private-keys
