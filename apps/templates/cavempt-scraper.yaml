@@ -61,3 +61,31 @@ spec:
     - name: https
       port: 443
       targetPort: 8443
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cavempt-scraper-job
+  namespace: cavempt-scraper
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: curl
+            image: curlimages/curl:latest
+            args:
+              - curl
+              - -X
+              - GET
+              - http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/update-all
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+          restartPolicy: OnFailure
