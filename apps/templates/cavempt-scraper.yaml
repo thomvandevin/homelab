@@ -75,7 +75,7 @@ spec:
         spec:
           containers:
           - name: curl
-            image: curlimages/curl:latest
+            image: curlimages/curl:latest@sha256:d43bdb28bae0be0998f3be83199bfb2b81e0a30b034b6d7586ce7e05de34c3fd
             args:
               - curl
               - -X
