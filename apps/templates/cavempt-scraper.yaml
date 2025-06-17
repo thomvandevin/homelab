@@ -28,6 +28,17 @@ spec:
           ports:
             - containerPort: 8080
             - containerPort: 8443
+          env:
+            - name: POSTGRES_HOST
+              value: postgresql.db-system.svc.cluster.local
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: cavempt_scraper
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.db.password | quote }}
           resources:
             requests:
               cpu: 100m
@@ -68,24 +79,24 @@ metadata:
   name: cavempt-scraper-job
   namespace: cavempt-scraper
 spec:
-  schedule: "1 * * * *"
+  schedule: "*/5 * * * *"
   jobTemplate:
     spec:
       template:
         spec:
           containers:
-          - name: curl
-            image: curlimages/curl:latest@sha256:9a1ed35addb45476afa911696297f8e115993df459278ed036182dd2cd22b67b
-            args:
-              - curl
-              - -X
-              - GET
-              - http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/update-all
-            resources:
-              requests:
-                cpu: 50m
-                memory: 64Mi
-              limits:
-                cpu: 100m
-                memory: 128Mi
+            - name: curl
+              image: curlimages/curl:latest@sha256:9a1ed35addb45476afa911696297f8e115993df459278ed036182dd2cd22b67b
+              args:
+                - curl
+                - -X
+                - GET
+                - http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/update-all
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
           restartPolicy: OnFailure
