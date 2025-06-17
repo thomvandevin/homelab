@@ -68,7 +68,7 @@ metadata:
   name: cavempt-scraper-job
   namespace: cavempt-scraper
 spec:
-  schedule: "*/1 * * * *"
+  schedule: "1 * * * *"
   jobTemplate:
     spec:
       template:
