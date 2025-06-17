@@ -24,7 +24,7 @@ spec:
             - hostname: "homelab.thomvandev.in"
               service: http://echo-svc.echo.svc.cluster.local
             - hostname: "homeassistant.thomvandev.in"
-              service: http://home-assistant.default.svc.cluster.local
+              service: http://home-assistant.home-assistant.svc.cluster.local:8080
             - hostname: "cavempt.thomvandev.in"
               service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
