@@ -39,6 +39,10 @@ spec:
               value: postgres
             - name: POSTGRES_PASSWORD
               value: {{ .Values.db.password | quote }}
+            - name: PUSHOVER_USER
+              value: {{ .Values.pushover.scraper.user | quote }}
+            - name: PUSHOVER_TOKEN
+              value: {{ .Values.pushover.scraper.token | quote }}
           resources:
             requests:
               cpu: 100m
@@ -54,7 +58,7 @@ metadata:
   name: scraper-gcr-key
   namespace: scraper
 data:
-  .dockerconfigjson: {{ .Values.gcr.cavempt_scraper | quote }}
+  .dockerconfigjson: {{ .Values.gcr.scraper | quote }}
 ---
 apiVersion: v1
 kind: Service
