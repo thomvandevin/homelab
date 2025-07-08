@@ -168,7 +168,25 @@
   # List services that you want to enable:
 
   # Enable the OpenSSH daemon.
-  services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+    allowSFTP = false;
+    settings = {
+      PasswordAuthentication = false;
+    };
+  };
+
+  # fail2ban
+  services.fail2ban = {
+    enable = true;
+    # Ban IP after 5 failures
+    maxretry = 5;
+    ignoreIP = [
+      "10.0.0.0/8" # k8s
+      "192.168.0.0/16" # home network
+      "100.64.0.0/10" # tailscale
+    ];
+  };
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
