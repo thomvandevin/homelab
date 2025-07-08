@@ -10,7 +10,16 @@ data:
         server_name cavempt.thomvandev.in;
 
         location / {
-            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/cavempt;
+            proxy_pass http://scraper-svc.scraper.svc.cluster.local/cavempt;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name rottencloset.thomvandev.in;
+
+        location / {
+            proxy_pass http://scraper-svc.scraper.svc.cluster.local/rottencloset;
         }
     }
 
@@ -19,7 +28,7 @@ data:
         server_name pokebeach.thomvandev.in;
 
         location / {
-            proxy_pass http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/pokebeach/rss;
+            proxy_pass http://scraper-svc.scraper.svc.cluster.local/pokebeach/rss;
         }
     }
 ---

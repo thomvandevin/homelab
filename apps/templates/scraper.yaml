@@ -1,29 +1,29 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: cavempt-scraper
+  name: scraper
   labels:
-    name: cavempt-scraper
+    name: scraper
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cavempt-scraper
-  namespace: cavempt-scraper
+  name: scraper
+  namespace: scraper
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: cavempt-scraper
+      app: scraper
   template:
     metadata:
       labels:
-        app: cavempt-scraper
+        app: scraper
     spec:
       imagePullSecrets:
-        - name: cavempt-scraper-gcr-key
+        - name: scraper-gcr-key
       containers:
-        - name: cavempt-scraper
+        - name: scraper
           image: gcr.io/cavempt-scraper/cavempt-scraper
           ports:
             - containerPort: 8080
@@ -34,7 +34,7 @@ spec:
             - name: POSTGRES_PORT
               value: "5432"
             - name: POSTGRES_DB
-              value: cavempt_scraper
+              value: scraper
             - name: POSTGRES_USER
               value: postgres
             - name: POSTGRES_PASSWORD
@@ -51,20 +51,20 @@ apiVersion: v1
 kind: Secret
 type: kubernetes.io/dockerconfigjson
 metadata:
-  name: cavempt-scraper-gcr-key
-  namespace: cavempt-scraper
+  name: scraper-gcr-key
+  namespace: scraper
 data:
   .dockerconfigjson: {{ .Values.gcr.cavempt_scraper | quote }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: cavempt-scraper-svc
-  namespace: cavempt-scraper
+  name: scraper-svc
+  namespace: scraper
 spec:
   type: ClusterIP
   selector:
-    app: cavempt-scraper
+    app: scraper
   ports:
     - name: http
       port: 80
@@ -76,8 +76,8 @@ spec:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: cavempt-scraper-job
-  namespace: cavempt-scraper
+  name: scraper-job
+  namespace: scraper
 spec:
   schedule: "*/5 * * * *"
   jobTemplate:
@@ -91,7 +91,7 @@ spec:
                 - curl
                 - -X
                 - GET
-                - http://cavempt-scraper-svc.cavempt-scraper.svc.cluster.local/update-all
+                - http://scraper-svc.scraper.svc.cluster.local/update-all
               resources:
                 requests:
                   cpu: 50m
