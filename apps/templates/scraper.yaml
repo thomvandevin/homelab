@@ -34,7 +34,7 @@ spec:
             - name: POSTGRES_PORT
               value: "5432"
             - name: POSTGRES_DB
-              value: scraper
+              value: scraper_db
             - name: POSTGRES_USER
               value: postgres
             - name: POSTGRES_PASSWORD
