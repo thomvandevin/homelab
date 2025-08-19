@@ -24,10 +24,12 @@ spec:
             server.insecure: true
           cm:
             helm.valuesFileSchemes: >-
-              secrets+gpg-import, secrets+gpg-import-kubernetes, secrets+age-import, secrets+age-import-kubernetes, secrets, secrets+literal, https
+              secrets+gpg-import, secrets+gpg-import-kubernetes, secrets+age-import, secrets+age-import-kubernetes, secrets, secrets+literal, https, secrets+https
 
         repoServer:
           env:
+            - name: PATH
+              value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
             - name: HELM_PLUGINS
               value: /gitops-tools/helm-plugins/
             - name: HELM_SECRETS_CURL_PATH
@@ -53,14 +55,11 @@ spec:
               value: "true"
             - name: HELM_SECRETS_HELM_PATH
               value: /usr/local/bin/helm
-
             - name: HELM_SECRETS_LOAD_GPG_KEYS
-              # Multiple keys can be separated by space
               value: /helm-secrets-private-keys/key.asc
           volumes:
             - name: gitops-tools
               emptyDir: {}
-            # kubectl create secret generic helm-secrets-private-keys --from-file=key.asc=assets/gpg/private2.gpg
             - name: helm-secrets-private-keys
               secret:
                 secretName: helm-secrets-private-keys
@@ -79,7 +78,7 @@ spec:
               command: [sh, -ec]
               env:
                 - name: HELM_SECRETS_VERSION
-                  value: "4.6.4"
+                  value: "4.6.2"
                 - name: KUBECTL_VERSION
                   value: "1.30.2"
                 - name: VALS_VERSION
