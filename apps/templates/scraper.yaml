@@ -83,7 +83,7 @@ metadata:
   name: scraper-job
   namespace: scraper
 spec:
-  schedule: "*/5 * * * *"
+  schedule: "*/10 * * * *"
   jobTemplate:
     spec:
       template:
