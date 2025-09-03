@@ -46,13 +46,15 @@ spec:
             - name: HELM_SECRETS_VALUES_ALLOW_SYMLINKS
               value: "false"
             - name: HELM_SECRETS_VALUES_ALLOW_ABSOLUTE_PATH
-              value: "true"
+              value: "false"
             - name: HELM_SECRETS_VALUES_ALLOW_PATH_TRAVERSAL
               value: "false"
             - name: HELM_SECRETS_WRAPPER_ENABLED
               value: "true"
             - name: HELM_SECRETS_DECRYPT_SECRETS_IN_TMP_DIR
               value: "true"
+            - name: HELM_SECRETS_KEY_LOCATION_PREFIX
+              value: "/secrets/"
             - name: HELM_SECRETS_HELM_PATH
               value: /usr/local/bin/helm
             - name: HELM_SECRETS_LOAD_GPG_KEYS
@@ -78,7 +80,7 @@ spec:
               command: [sh, -ec]
               env:
                 - name: HELM_SECRETS_VERSION
-                  value: "4.6.2"
+                  value: "4.6.1"
                 - name: KUBECTL_VERSION
                   value: "1.30.2"
                 - name: VALS_VERSION
