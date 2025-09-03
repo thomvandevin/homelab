@@ -80,7 +80,7 @@ spec:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: scraper-job
+  name: scraper-job-short
   namespace: scraper
 spec:
   schedule: "*/10 * * * *"
@@ -95,7 +95,35 @@ spec:
                 - curl
                 - -X
                 - GET
-                - http://scraper-svc.scraper.svc.cluster.local/update-all
+                - http://scraper-svc.scraper.svc.cluster.local/update?sources=pokebeach&rottencloset
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scraper-job-long
+  namespace: scraper
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:4026b29997dc7c823b51c164b71e2b51e0fd95cce4601f78202c513d97da2922
+              args:
+                - curl
+                - -X
+                - GET
+                - http://scraper-svc.scraper.svc.cluster.local/update?sources=cavempt
               resources:
                 requests:
                   cpu: 50m
