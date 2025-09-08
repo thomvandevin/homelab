@@ -35,6 +35,7 @@ helm plugin install https://github.com/jkroepke/helm-secrets --version v4.6.2
 ```sh
 helm secrets encrypt secrets.yaml.dec > secrets.yaml
 ```
+
 5. Make sure argocd has the private key. Export it first and then import the private key by creating a kubernetes secret.
 
 ```sh

@@ -80,13 +80,13 @@ spec:
               command: [sh, -ec]
               env:
                 - name: HELM_SECRETS_VERSION
-                  value: "4.6.1"
+                  value: "4.6.10"
                 - name: KUBECTL_VERSION
-                  value: "1.30.2"
+                  value: "1.31.12"
                 - name: VALS_VERSION
-                  value: "0.37.3"
+                  value: "0.39.2"
                 - name: SOPS_VERSION
-                  value: "3.9.0"
+                  value: "3.10.2"
               args:
                 - |
                   mkdir -p /gitops-tools/helm-plugins
