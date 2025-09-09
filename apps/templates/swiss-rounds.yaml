@@ -21,7 +21,7 @@ spec:
         app: swiss-rounds
     spec:
       imagePullSecrets:
-        - name: swiss-rounds-gcr-key
+        - name: gcr-swiss-rounds-secret
       containers:
         - name: swiss-rounds
           image: gcr.io/swiss-rounds/swiss-rounds
@@ -35,15 +35,6 @@ spec:
             limits:
               cpu: 250m
               memory: 256Mi
----
-apiVersion: v1
-kind: Secret
-type: kubernetes.io/dockerconfigjson
-metadata:
-  name: swiss-rounds-gcr-key
-  namespace: swiss-rounds
-data:
-  .dockerconfigjson: {{ .Values.gcr.swiss_rounds | quote }}
 ---
 apiVersion: v1
 kind: Service

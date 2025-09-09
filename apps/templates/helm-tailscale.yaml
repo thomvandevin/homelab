@@ -17,8 +17,12 @@ spec:
     helm:
       valuesObject:
         oauth:
-          clientId: {{ .Values.tailscale.clientId | quote }}
-          clientSecret: {{ .Values.tailscale.clientSecret | quote }}
+          clientId:
+            secretName: tailscale-secret
+            secretKey: clientId
+          clientSecret:
+            secretName: tailscale-secret
+            secretKey: clientSecret
         apiServerProxyConfig:
           mode: "true"
   destination:
