@@ -21,7 +21,7 @@ spec:
         app: scraper
     spec:
       imagePullSecrets:
-        - name: scraper-gcr-key
+        - name: gcr-scraper-secret
       containers:
         - name: scraper
           image: gcr.io/cavempt-scraper/cavempt-scraper
@@ -38,11 +38,20 @@ spec:
             - name: POSTGRES_USER
               value: postgres
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.db.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
             - name: PUSHOVER_USER
-              value: {{ .Values.pushover.scraper.user | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: scraper-secret
+                  key: user
             - name: PUSHOVER_TOKEN
-              value: {{ .Values.pushover.scraper.token | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: scraper-secret
+                  key: token
           resources:
             requests:
               cpu: 100m
@@ -50,15 +59,6 @@ spec:
             limits:
               cpu: 250m
               memory: 256Mi
----
-apiVersion: v1
-kind: Secret
-type: kubernetes.io/dockerconfigjson
-metadata:
-  name: scraper-gcr-key
-  namespace: scraper
-data:
-  .dockerconfigjson: {{ .Values.gcr.scraper | quote }}
 ---
 apiVersion: v1
 kind: Service

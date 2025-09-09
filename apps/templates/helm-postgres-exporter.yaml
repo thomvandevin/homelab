@@ -25,8 +25,8 @@ spec:
           datasource:
             host: postgresql.db-system.svc.cluster.local
             passwordSecret:
-              name: postgresql
-              key: postgres-password
+              name: db-secret
+              key: password
   destination:
     namespace: db-system
     server: https://kubernetes.default.svc

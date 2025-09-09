@@ -19,7 +19,7 @@ spec:
         cloudflare:
           tunnelName: "homelab"
           tunnelId: "8ea8da25-8b7a-4b64-b3e5-b3624680679c"
-          secretName: "tunnel-credentials"
+          secretName: "cloudflare-secret"
           ingress:
             - hostname: "homelab.thomvandev.in"
               service: http://echo-svc.echo.svc.cluster.local
