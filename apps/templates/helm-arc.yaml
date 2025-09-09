@@ -18,10 +18,9 @@ spec:
     helm:
       valuesObject:
         authSecret:
-          create: true
-          github_token:
-            secretName: github-secret
-            secretKey: github_token
+          create: false
+          name: github-secret
+          key: github_token
   destination:
     namespace: actions-runner-controller
     server: https://kubernetes.default.svc
