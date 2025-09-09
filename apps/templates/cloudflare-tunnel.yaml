@@ -17,29 +17,29 @@ spec:
     helm:
       valuesObject:
         cloudflare:
-          tunnelName: "homelab"
-          tunnelId: "8ea8da25-8b7a-4b64-b3e5-b3624680679c"
-          secretName: "cloudflare-secret"
+          tunnelName: homelab
+          tunnelId: 8ea8da25-8b7a-4b64-b3e5-b3624680679c
+          secretName: cloudflare-secret
           ingress:
-            - hostname: "homelab.thomvandev.in"
+            - hostname: homelab.thomvandev.in
               service: http://echo-svc.echo.svc.cluster.local
-            - hostname: "homeassistant.thomvandev.in"
+            - hostname: homeassistant.thomvandev.in
               service: http://home-assistant.home-assistant.svc.cluster.local:8080
-            - hostname: "cavempt.thomvandev.in"
+            - hostname: cavempt.thomvandev.in
               service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
                 httpHostHeader: cavempt.thomvandev.in
-            - hostname: "rottencloset.thomvandev.in"
+            - hostname: rottencloset.thomvandev.in
               service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
                 httpHostHeader: rottencloset.thomvandev.in
-            - hostname: "pokebeach.thomvandev.in"
+            - hostname: pokebeach.thomvandev.in
               service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
                 httpHostHeader: pokebeach.thomvandev.in
-            - hostname: "swissrounds.thomvandev.in"
+            - hostname: swissrounds.thomvandev.in
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
-            - hostname: "swissrounds.app"
+            - hostname: swissrounds.app
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
             - hostname: "*.swissrounds.app"
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local

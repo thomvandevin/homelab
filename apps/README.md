@@ -148,7 +148,6 @@ The following sealed secrets are configured:
 | `db-secret` | `db-system` | Database credentials | `password` |
 | `github-secret` | `actions-runner-controller` | GitHub token for ARC | `token` |
 | `scraper-secret` | `default` | Pushover notifications | `user`, `token` |
-| `sharry-secret` | `default` | Sharry application | `password`, `db_password` |
 | `gcr-scraper-secret` | `scraper` | GCR pull secret for scraper | `.dockerconfigjson` |
 | `gcr-swiss-rounds-secret` | `swiss-rounds` | GCR pull secret for swiss-rounds | `.dockerconfigjson` |
 

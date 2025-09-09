@@ -80,8 +80,4 @@
         <td><a href="https://github.com/argoproj/argo-cd">Argo CD</a></td>
         <td>Declarative GitOps CD for Kubernetes</td>
     </tr>
-     <td style="text-align: center;"><img height="32" src="https://eikek.github.io/sharry/img/light-navbar-brand.svg"></td>
-        <td><a href="https://github.com/eikek/sharry">Sharry</a></td>
-        <td>Self-hosted file sharing web application.</td>
-    </tr>
 </table>
