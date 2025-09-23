@@ -25,6 +25,8 @@ spec:
               service: http://echo-svc.echo.svc.cluster.local
             - hostname: homeassistant.thomvandev.in
               service: http://home-assistant.home-assistant.svc.cluster.local:8080
+            - hostname: scraper.thomvandev.in
+              service: http://scraper-svc.scraper.svc.cluster.local
             - hostname: cavempt.thomvandev.in
               service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
