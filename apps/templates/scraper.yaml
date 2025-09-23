@@ -95,7 +95,7 @@ spec:
                 - curl
                 - -X
                 - GET
-                - http://scraper-svc.scraper.svc.cluster.local/update?sources=pokebeach&rottencloset
+                - http://scraper-svc.scraper.svc.cluster.local/update?sources=pokebeach&rottencloset&kaiofcards
               resources:
                 requests:
                   cpu: 50m
