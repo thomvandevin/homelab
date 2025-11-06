@@ -168,6 +168,26 @@ create_gcr_swiss_rounds_secret() {
     echo -e "${GREEN}✓ Created sealed-gcr-swiss-rounds-secret.yaml${NC}"
 }
 
+
+# Create sealed secret for GCR Limitless Tournament Decks
+create_gcr_limitless_tournament_decks_secret() {
+    echo -e "${YELLOW}Creating gcr-limitless-tournament-decks-secret...${NC}"
+    
+    local dockerconfig=$(yq e '.gcr.limitless_tournament_decks' "$SECRETS_FILE")
+    
+    # The dockerconfig is already base64 encoded, so decode it first then use directly
+    echo "$dockerconfig" | base64 -d > /tmp/gcr-limitless-tournament-decks-config.json
+    kubectl create secret generic gcr-limitless-tournament-decks-secret \
+        --namespace=limitless-tournament-decks \
+        --from-file=.dockerconfigjson=/tmp/gcr-limitless-tournament-decks-config.json \
+        --type=kubernetes.io/dockerconfigjson \
+        --dry-run=client -o yaml | \
+    kubeseal --format=yaml --namespace=limitless-tournament-decks > "$OUTPUT_DIR/sealed-gcr-limitless-tournament-decks-secret.yaml"
+    
+    rm /tmp/gcr-limitless-tournament-decks-config.json
+    echo -e "${GREEN}✓ Created sealed-gcr-limitless-tournament-decks-secret.yaml${NC}"
+}
+
 # Main function
 main() {
     echo -e "${GREEN}🔐 Sealed Secrets Generator${NC}"
@@ -187,6 +207,7 @@ main() {
     create_scraper_secret
     create_gcr_scraper_secret
     create_gcr_swiss_rounds_secret
+    create_gcr_limitless_tournament_decks_secret
     
     echo ""
     echo -e "${GREEN}✅ All sealed secrets created successfully!${NC}"

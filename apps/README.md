@@ -150,6 +150,7 @@ The following sealed secrets are configured:
 | `scraper-secret` | `default` | Pushover notifications | `user`, `token` |
 | `gcr-scraper-secret` | `scraper` | GCR pull secret for scraper | `.dockerconfigjson` |
 | `gcr-swiss-rounds-secret` | `swiss-rounds` | GCR pull secret for swiss-rounds | `.dockerconfigjson` |
+| `gcr-limitless-tournament-decks-secret` | `limitless-tournament-decks` | GCR pull secret for limitless-tournament-decks | `.dockerconfigjson` |
 
 ### Adding New Secrets
 
@@ -196,6 +197,33 @@ kubeseal --format=yaml --namespace=namespace > apps/templates/sealed-secret-name
 3. Apply the updated secret:
 ```bash
 kubectl apply -f apps/templates/sealed-secret-name.yaml
+```
+
+### Creating GCR/Artifact Registry Secrets
+
+For Google Container Registry (GCR) or Artifact Registry authentication, use the `encode-gcr-secret.py` script to convert service account keys to the proper dockerconfigjson format:
+
+```bash
+# Convert a Google service account JSON key to base64-encoded dockerconfigjson
+./scripts/encode-gcr-secret.py path/to/service-account.json
+
+# Verify the conversion
+./scripts/encode-gcr-secret.py path/to/service-account.json --verify
+
+# Use with a different registry (e.g., Artifact Registry)
+./scripts/encode-gcr-secret.py path/to/service-account.json --registry us-docker.pkg.dev
+```
+
+The script outputs a base64-encoded string that can be added directly to `secrets.yaml.dec`:
+
+```yaml
+gcr:
+  my_service: "eyJhdXRocyI6eyJnY3IuaW8iOnsidXNlcm5hbWUiOiJfanNvbl9rZXki..."
+```
+
+Then regenerate sealed secrets using the automation script:
+```bash
+./scripts/create-sealed-secrets.sh
 ```
 
 ## Application Structure
@@ -276,6 +304,7 @@ kubectl describe pod pod-name -n namespace
 ## Automation Scripts
 
 - `scripts/create-sealed-secrets.sh`: Automated sealed secret generation from `secrets.yaml.dec`
+- `scripts/encode-gcr-secret.py`: Convert Google service account JSON keys to base64-encoded dockerconfigjson format for GCR/Artifact Registry authentication
 
 ## Directory Structure
 

@@ -21,10 +21,13 @@ spec:
           tunnelId: 8ea8da25-8b7a-4b64-b3e5-b3624680679c
           secretName: cloudflare-secret
           ingress:
+            # Homelab
             - hostname: homelab.thomvandev.in
               service: http://echo-svc.echo.svc.cluster.local
+            # Home Assistant
             - hostname: homeassistant.thomvandev.in
               service: http://home-assistant.home-assistant.svc.cluster.local:8080
+            # Scraper
             - hostname: scraper.thomvandev.in
               service: http://scraper-svc.scraper.svc.cluster.local
             - hostname: cavempt.thomvandev.in
@@ -39,6 +42,10 @@ spec:
               service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
                 httpHostHeader: pokebeach.thomvandev.in
+            # Decklist
+            - hostname: decklists.thomvandev.in
+              service: http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local:80
+            # Swiss Rounds
             - hostname: swissrounds.thomvandev.in
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
             - hostname: swissrounds.app
