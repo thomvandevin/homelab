@@ -32,6 +32,20 @@ spec:
           image: gcr.io/limitless-tournament-decks/limitless-tournament-decks
           ports:
             - containerPort: 3000
+          env:
+            - name: POSTGRES_HOST
+              value: postgresql.db-system.svc.cluster.local
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: limitless_tournaments_db
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
           readinessProbe:
             httpGet:
               path: /
@@ -59,3 +73,87 @@ spec:
     - name: http
       port: 80
       targetPort: 3000
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: limitless-preload-onepiece
+  namespace: limitless-tournament-decks
+spec:
+  schedule: "0 */3 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:935d9100e9ba842cdb060de42472c7ca90cfe9a7c96e4dacb55e79e560b3ff40
+              args:
+                - curl
+                - -X
+                - GET
+                - http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local/preload?game=OP&maxTournaments=20&preloadStandings=true&preloadDecklists=true&maxDecksPerTournament=-1
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: limitless-preload-pokemon
+  namespace: limitless-tournament-decks
+spec:
+  schedule: "0 */3 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:935d9100e9ba842cdb060de42472c7ca90cfe9a7c96e4dacb55e79e560b3ff40
+              args:
+                - curl
+                - -X
+                - GET
+                - http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local/preload?game=PTCG&maxTournaments=20&preloadStandings=true&preloadDecklists=true&maxDecksPerTournament=-1
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: limitless-cleanup
+  namespace: limitless-tournament-decks
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:935d9100e9ba842cdb060de42472c7ca90cfe9a7c96e4dacb55e79e560b3ff40
+              args:
+                - curl
+                - -X
+                - GET
+                - http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local/cleanup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+          restartPolicy: OnFailure
