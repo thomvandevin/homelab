@@ -82,6 +82,36 @@ create_db_secret() {
     echo -e "${GREEN}✓ Created sealed-db-secret.yaml${NC}"
 }
 
+# Create sealed secret for Database (scraper namespace)
+create_db_secret_scraper() {
+    echo -e "${YELLOW}Creating db-secret for scraper namespace...${NC}"
+    
+    local password=$(yq e '.db.password' "$SECRETS_FILE")
+    
+    kubectl create secret generic db-secret \
+        --namespace=scraper \
+        --from-literal=password="$password" \
+        --dry-run=client -o yaml | \
+    kubeseal --format=yaml --namespace=scraper > "$OUTPUT_DIR/sealed-db-secret-scraper.yaml"
+    
+    echo -e "${GREEN}✓ Created sealed-db-secret-scraper.yaml${NC}"
+}
+
+# Create sealed secret for Database (limitless-tournament-decks namespace)
+create_db_secret_limitless() {
+    echo -e "${YELLOW}Creating db-secret for limitless-tournament-decks namespace...${NC}"
+    
+    local password=$(yq e '.db.password' "$SECRETS_FILE")
+    
+    kubectl create secret generic db-secret \
+        --namespace=limitless-tournament-decks \
+        --from-literal=password="$password" \
+        --dry-run=client -o yaml | \
+    kubeseal --format=yaml --namespace=limitless-tournament-decks > "$OUTPUT_DIR/sealed-db-secret-limitless.yaml"
+    
+    echo -e "${GREEN}✓ Created sealed-db-secret-limitless.yaml${NC}"
+}
+
 
 # Create sealed secret for GitHub
 create_github_secret() {
@@ -202,6 +232,8 @@ main() {
     
     create_tailscale_secret
     create_db_secret
+    create_db_secret_scraper
+    create_db_secret_limitless
     create_github_secret
     create_cloudflare_secret
     create_scraper_secret
