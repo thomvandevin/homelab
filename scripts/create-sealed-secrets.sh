@@ -198,7 +198,6 @@ create_gcr_swiss_rounds_secret() {
     echo -e "${GREEN}✓ Created sealed-gcr-swiss-rounds-secret.yaml${NC}"
 }
 
-
 # Create sealed secret for GCR Limitless Tournament Decks
 create_gcr_limitless_tournament_decks_secret() {
     echo -e "${YELLOW}Creating gcr-limitless-tournament-decks-secret...${NC}"
@@ -216,6 +215,25 @@ create_gcr_limitless_tournament_decks_secret() {
     
     rm /tmp/gcr-limitless-tournament-decks-config.json
     echo -e "${GREEN}✓ Created sealed-gcr-limitless-tournament-decks-secret.yaml${NC}"
+}
+
+# Create sealed secret for GCR Limitless Tournament Decks
+create_gcr_end_of_year_secret() {
+    echo -e "${YELLOW}Creating gcr-end-of-year-secret...${NC}"
+    
+    local dockerconfig=$(yq e '.gcr.end_of_year' "$SECRETS_FILE")
+    
+    # The dockerconfig is already base64 encoded, so decode it first then use directly
+    echo "$dockerconfig" | base64 -d > /tmp/gcr-end-of-year-config.json
+    kubectl create secret generic gcr-end-of-year-secret \
+        --namespace=end-of-year \
+        --from-file=.dockerconfigjson=/tmp/gcr-end-of-year-config.json \
+        --type=kubernetes.io/dockerconfigjson \
+        --dry-run=client -o yaml | \
+    kubeseal --format=yaml --namespace=end-of-year > "$OUTPUT_DIR/sealed-gcr-end-of-year-secret.yaml"
+    
+    rm /tmp/gcr-end-of-year-config.json
+    echo -e "${GREEN}✓ Created sealed-gcr-end-of-year-secret.yaml${NC}"
 }
 
 # Main function
@@ -240,6 +258,7 @@ main() {
     create_gcr_scraper_secret
     create_gcr_swiss_rounds_secret
     create_gcr_limitless_tournament_decks_secret
+    create_gcr_end_of_year_secret
     
     echo ""
     echo -e "${GREEN}✅ All sealed secrets created successfully!${NC}"

@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: end-of-year
+  labels:
+    name: end-of-year
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: end-of-year
+  namespace: end-of-year
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: end-of-year
+  template:
+    metadata:
+      labels:
+        app: end-of-year
+    spec:
+      imagePullSecrets:
+        - name: gcr-end-of-year-secret
+      containers:
+        - name: end-of-year
+          image: gcr.io/thomvandevin-end-of-year/end-of-year
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: end-of-year-svc
+  namespace: end-of-year
+spec:
+  type: ClusterIP
+  selector:
+    app: end-of-year
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
