@@ -46,6 +46,8 @@ spec:
                 secretKeyRef:
                   name: db-secret
                   key: password
+            - name: DATABASE_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@postgresql.db-system.svc.cluster.local:5432/limitless_tournaments_db
           readinessProbe:
             httpGet:
               path: /
