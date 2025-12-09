@@ -35,6 +35,16 @@ spec:
             - 10.0.0.0/8 # k8s
         persistence:
           enabled: true
+        hostNetwork: true
+        securityContext:
+          privileged: true
+        additionalVolumes:
+          - name: conbee-usb
+            hostPath:
+              path: /dev/ttyACM0
+        additionalMounts:
+          - name: conbee-usb
+            mountPath: /dev/ttyACM0
   destination:
     namespace: home-assistant
     server: https://kubernetes.default.svc
