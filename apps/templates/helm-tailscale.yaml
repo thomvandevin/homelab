@@ -1,3 +1,13 @@
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: tailscale-secret
+  namespace: tailscale
+data:
+  clientId: {{ .Values.tailscale.clientId | b64enc | quote }}
+  clientSecret: {{ .Values.tailscale.clientSecret | b64enc | quote }}
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

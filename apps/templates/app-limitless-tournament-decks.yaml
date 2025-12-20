@@ -5,6 +5,24 @@ metadata:
   labels:
     name: limitless-tournament-decks
 ---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-secret
+  namespace: limitless-tournament-decks
+data:
+  password: {{ .Values.db.password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gcr-limitless-tournament-decks-secret
+  namespace: limitless-tournament-decks
+data:
+  .dockerconfigjson: {{ .Values.gcr.limitless_tournament_decks | quote }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

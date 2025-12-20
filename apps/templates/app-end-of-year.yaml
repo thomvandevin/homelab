@@ -5,6 +5,15 @@ metadata:
   labels:
     name: end-of-year
 ---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gcr-end-of-year-secret
+  namespace: end-of-year
+data:
+  .dockerconfigjson: {{ .Values.gcr.end_of_year | quote }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -1,9 +1,13 @@
-.env
-.idea
+# Secrets
 secrets.yaml.dec
+key.txt
+
+# IDE
+.idea
+.vscode
+
+# Local files
+.env
 .github/self-hosted-runner/
 backup
-key.asc
-generate-gpg
-.vscode
 .claude

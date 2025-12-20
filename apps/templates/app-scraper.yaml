@@ -5,6 +5,34 @@ metadata:
   labels:
     name: scraper
 ---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-secret
+  namespace: scraper
+data:
+  password: {{ .Values.db.password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: scraper-secret
+  namespace: scraper
+data:
+  user: {{ .Values.pushover.scraper.user | b64enc | quote }}
+  token: {{ .Values.pushover.scraper.token | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gcr-scraper-secret
+  namespace: scraper
+data:
+  .dockerconfigjson: {{ .Values.gcr.scraper | quote }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

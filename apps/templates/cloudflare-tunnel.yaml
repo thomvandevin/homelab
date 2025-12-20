@@ -1,3 +1,12 @@
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: tunnel-credentials
+  namespace: cloudflare-tunnel
+data:
+  credentials.json: {{ .Values.cloudflare.secret | b64enc | quote }}
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -19,7 +28,7 @@ spec:
         cloudflare:
           tunnelName: homelab
           tunnelId: 8ea8da25-8b7a-4b64-b3e5-b3624680679c
-          secretName: cloudflare-secret
+          secretName: tunnel-credentials
           ingress:
             # Homelab
             - hostname: homelab.thomvandev.in

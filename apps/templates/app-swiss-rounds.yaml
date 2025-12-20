@@ -5,6 +5,15 @@ metadata:
   labels:
     name: swiss-rounds
 ---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gcr-swiss-rounds-secret
+  namespace: swiss-rounds
+data:
+  .dockerconfigjson: {{ .Values.gcr.swiss_rounds | quote }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
