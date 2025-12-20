@@ -16,4 +16,4 @@ spec:
     targetRevision: main
     helm:
       valueFiles:
-        - secrets://https://raw.githubusercontent.com/thomvandevin/homelab/refs/heads/main/apps/secrets.yaml
+        - secrets://secrets.yaml
