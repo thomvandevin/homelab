@@ -107,7 +107,7 @@ spec:
         spec:
           containers:
             - name: curl
-              image: curlimages/curl:latest@sha256:935d9100e9ba842cdb060de42472c7ca90cfe9a7c96e4dacb55e79e560b3ff40
+              image: curlimages/curl:latest@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c687af78a74f380087a0addf5d17
               args:
                 - curl
                 - -X
@@ -135,7 +135,7 @@ spec:
         spec:
           containers:
             - name: curl
-              image: curlimages/curl:latest@sha256:935d9100e9ba842cdb060de42472c7ca90cfe9a7c96e4dacb55e79e560b3ff40
+              image: curlimages/curl:latest@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c687af78a74f380087a0addf5d17
               args:
                 - curl
                 - -X
@@ -163,7 +163,7 @@ spec:
         spec:
           containers:
             - name: curl
-              image: curlimages/curl:latest@sha256:935d9100e9ba842cdb060de42472c7ca90cfe9a7c96e4dacb55e79e560b3ff40
+              image: curlimages/curl:latest@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c687af78a74f380087a0addf5d17
               args:
                 - curl
                 - -X
