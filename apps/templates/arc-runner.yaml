@@ -8,3 +8,14 @@ spec:
   template:
     spec:
       repository: thomvandevin/homelab
+---
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: homelab-media-runner
+  namespace: default
+spec:
+  replicas: 1
+  template:
+    spec:
+      repository: thomvandevin/homelab-media
