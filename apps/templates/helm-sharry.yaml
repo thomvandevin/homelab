@@ -32,16 +32,7 @@ spec:
                 port: 9090
         ingress:
           main:
-            enabled: true
-            ingressClassName: tailscale
-            hosts:
-              - host: sharry
-                paths:
-                  - path: /
-                    pathType: Prefix
-            tls:
-              - hosts:
-                  - sharry
+            enabled: false
         config: |
           sharry.restserver {
             base-url = "https://sharry.thomvandev.in"
@@ -50,6 +41,12 @@ spec:
               port = 9090
             }
             backend {
+              signup {
+                mode = "closed"
+              }
+              share {
+                max-size = "10G"
+              }
               auth {
                 fixed {
                   enabled = true
