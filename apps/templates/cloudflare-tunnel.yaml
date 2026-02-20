@@ -64,6 +64,9 @@ spec:
             # End of year
             - hostname: end-of-year.thomvandev.in
               service: http://end-of-year-svc.end-of-year.svc.cluster.local:80
+            # Navidrome
+            - hostname: navidrome.thomvandev.in
+              service: http://192.168.178.20:4533
             # Sharry
             - hostname: sharry.thomvandev.in
               service: http://sharry.sharry.svc.cluster.local:9090
