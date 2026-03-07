@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: gitlab-runner-secret
+  namespace: gitlab-runner
+data:
+  runner-registration-token: {{ .Values.gitlab.runner_token | b64enc | quote }}
+  runner-token: {{ .Values.gitlab.runner_token | b64enc | quote }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitlab-runner
+  namespace: argocd
+spec:
+  project: default
+  syncPolicy:
+    automated:
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
+  source:
+    repoURL: https://charts.gitlab.io
+    chart: gitlab-runner
+    targetRevision: 0.72.0
+    helm:
+      valuesObject:
+        gitlabUrl: https://gitlab.com
+        rbac:
+          create: true
+        runners:
+          secret: gitlab-runner-secret
+          config: |
+            [[runners]]
+              [runners.kubernetes]
+                namespace = "gitlab-runner"
+                image = "ubuntu:22.04"
+  destination:
+    namespace: gitlab-runner
+    server: https://kubernetes.default.svc
