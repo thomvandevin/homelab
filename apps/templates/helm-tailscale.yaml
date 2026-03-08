@@ -26,13 +26,14 @@ spec:
     targetRevision: 1.94.2
     helm:
       valuesObject:
-        oauth:
-          clientId:
+        oauthSecretVolume:
+          secret:
             secretName: tailscale-secret
-            secretKey: clientId
-          clientSecret:
-            secretName: tailscale-secret
-            secretKey: clientSecret
+            items:
+              - key: clientId
+                path: client_id
+              - key: clientSecret
+                path: client_secret
         apiServerProxyConfig:
           mode: "true"
   destination:
