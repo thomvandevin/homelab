@@ -8,6 +8,13 @@ data:
   runner-registration-token: {{ .Values.gitlab.runner_token | b64enc | quote }}
   runner-token: {{ .Values.gitlab.runner_token | b64enc | quote }}
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gitlab-ci-job
+  namespace: gitlab-runner
+automountServiceAccountToken: true
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -36,6 +43,7 @@ spec:
               [runners.kubernetes]
                 namespace = "gitlab-runner"
                 image = "ubuntu:22.04"
+                service_account = "gitlab-ci-job"
   destination:
     namespace: gitlab-runner
     server: https://kubernetes.default.svc

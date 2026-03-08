@@ -23,7 +23,7 @@ metadata:
   namespace: pokemon-bot
 subjects:
   - kind: ServiceAccount
-    name: default
+    name: gitlab-ci-job
     namespace: gitlab-runner
 roleRef:
   kind: Role
