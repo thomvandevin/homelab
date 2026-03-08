@@ -1,0 +1,536 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pokemon-bot
+  labels:
+    name: pokemon-bot
+---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pokemon-bot-deployer
+  namespace: pokemon-bot
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-pokemon-bot-deploy
+  namespace: pokemon-bot
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: pokemon-bot-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# -- Secrets ------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-secret
+  namespace: pokemon-bot
+data:
+  password: {{ .Values.db.password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: pokemon-bot
+data:
+  .dockerconfigjson: {{ .Values.pokemon_bot.registry | quote }}
+---
+# -- RabbitMQ -----------------------------------------------------------------
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: pokemon-bot
+spec:
+  serviceName: rabbitmq
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3.13-management-alpine
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: guest
+            - name: RABBITMQ_DEFAULT_PASS
+              value: guest
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+---
+# -- Database init job ---------------------------------------------------------
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pokemon-bot-db-init
+  namespace: pokemon-bot
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      containers:
+        - name: db-init
+          image: postgres:16-alpine
+          env:
+            - name: PGHOST
+              value: postgresql.db-system.svc.cluster.local
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+          command:
+            - sh
+            - -c
+            - |
+              for db in pokemon_scraper pokemon_notifications pokemon_checkout; do
+                psql -tc "SELECT 1 FROM pg_database WHERE datname = '$db'" | grep -q 1 || psql -c "CREATE DATABASE $db"
+              done
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      restartPolicy: OnFailure
+---
+# -- Scraper backend ----------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scraper-backend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scraper-backend
+  template:
+    metadata:
+      labels:
+        app: scraper-backend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: scraper-backend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/scraper-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgresql.db-system.svc.cluster.local:5432/pokemon_scraper
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: SPRING_RABBITMQ_HOST
+              value: rabbitmq.pokemon-bot.svc.cluster.local
+            - name: SPRING_RABBITMQ_PORT
+              value: "5672"
+            - name: SPRING_RABBITMQ_USERNAME
+              value: guest
+            - name: SPRING_RABBITMQ_PASSWORD
+              value: guest
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scraper-backend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: scraper-backend
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+# -- Notifications backend -----------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications-backend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notifications-backend
+  template:
+    metadata:
+      labels:
+        app: notifications-backend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: notifications-backend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/notifications-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgresql.db-system.svc.cluster.local:5432/pokemon_notifications
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: SPRING_RABBITMQ_HOST
+              value: rabbitmq.pokemon-bot.svc.cluster.local
+            - name: SPRING_RABBITMQ_PORT
+              value: "5672"
+            - name: SPRING_RABBITMQ_USERNAME
+              value: guest
+            - name: SPRING_RABBITMQ_PASSWORD
+              value: guest
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifications-backend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: notifications-backend
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+# -- Checkout backend ----------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-backend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout-backend
+  template:
+    metadata:
+      labels:
+        app: checkout-backend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: checkout-backend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/checkout-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgresql.db-system.svc.cluster.local:5432/pokemon_checkout
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: SPRING_RABBITMQ_HOST
+              value: rabbitmq.pokemon-bot.svc.cluster.local
+            - name: SPRING_RABBITMQ_PORT
+              value: "5672"
+            - name: SPRING_RABBITMQ_USERNAME
+              value: guest
+            - name: SPRING_RABBITMQ_PASSWORD
+              value: guest
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout-backend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: checkout-backend
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+# -- Scraper frontend ----------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scraper-frontend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scraper-frontend
+  template:
+    metadata:
+      labels:
+        app: scraper-frontend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: scraper-frontend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/scraper-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scraper-frontend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: scraper-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# -- Notifications frontend ----------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications-frontend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notifications-frontend
+  template:
+    metadata:
+      labels:
+        app: notifications-frontend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: notifications-frontend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/notifications-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifications-frontend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: notifications-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# -- Checkout frontend ---------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-frontend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout-frontend
+  template:
+    metadata:
+      labels:
+        app: checkout-frontend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: checkout-frontend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/checkout-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout-frontend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: checkout-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# -- Tailscale Ingress (internal only) ----------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pokemon-scraper
+  namespace: pokemon-bot
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: scraper-frontend
+                port:
+                  number: 80
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - pokemon-scraper
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pokemon-notifications
+  namespace: pokemon-bot
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: notifications-frontend
+                port:
+                  number: 80
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - pokemon-notifications
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pokemon-checkout
+  namespace: pokemon-bot
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: checkout-frontend
+                port:
+                  number: 80
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - pokemon-checkout
