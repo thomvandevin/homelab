@@ -38,6 +38,7 @@ spec:
           create: true
         runners:
           secret: gitlab-runner-secret
+          tags: "homelab"
           config: |
             [[runners]]
               [runners.kubernetes]
