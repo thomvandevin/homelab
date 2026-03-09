@@ -153,6 +153,115 @@ spec:
               memory: 128Mi
       restartPolicy: OnFailure
 ---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: dashboard-secret
+  namespace: pokemon-bot
+data:
+  password: {{ .Values.pokemon_bot.dashboard_password | b64enc | quote }}
+  jwt-secret: {{ .Values.pokemon_bot.dashboard_jwt_secret | b64enc | quote }}
+---
+# -- Dashboard backend --------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard-backend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard-backend
+  template:
+    metadata:
+      labels:
+        app: dashboard-backend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: dashboard-backend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/dashboard-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DASHBOARD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secret
+                  key: password
+            - name: DASHBOARD_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secret
+                  key: jwt-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-backend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: dashboard-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+# -- Dashboard frontend -------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard-frontend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard-frontend
+  template:
+    metadata:
+      labels:
+        app: dashboard-frontend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: dashboard-frontend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/dashboard-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-frontend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: dashboard-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
 # -- Scraper backend ----------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -534,3 +643,24 @@ spec:
   tls:
     - hosts:
         - pokemon-checkout
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pokemon-dashboard
+  namespace: pokemon-bot
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: dashboard-frontend
+                port:
+                  number: 80
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - pokemon-dashboard

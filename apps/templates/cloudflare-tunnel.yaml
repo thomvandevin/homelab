@@ -51,6 +51,9 @@ spec:
               service: http://nginx-reverse-proxy.default.svc.cluster.local
               originRequest:
                 httpHostHeader: pokebeach.thomvandev.in
+            # Pokemon Bot Dashboard
+            - hostname: pokemon-bot.thomvandev.in
+              service: http://dashboard-frontend.pokemon-bot.svc.cluster.local:80
             # Decklist
             - hostname: decklists.thomvandev.in
               service: http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local:80
