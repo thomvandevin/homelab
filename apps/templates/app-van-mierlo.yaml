@@ -50,6 +50,8 @@ data:
   jwt-secret: {{ .Values.vanmierlo.jwt.secret | b64enc | quote }}
   minio-access-key: {{ "minioadmin" | b64enc | quote }}
   minio-secret-key: {{ .Values.minio.rootPassword | b64enc | quote }}
+  admin-username: {{ .Values.vanmierlo.admin.username | b64enc | quote }}
+  admin-password: {{ .Values.vanmierlo.admin.password | b64enc | quote }}
 ---
 apiVersion: v1
 kind: Secret
@@ -303,6 +305,16 @@ spec:
               value: "https://vanmierlo.thomvandev.in"
             - name: APP_SESSION_UNNAMED_CLEANUP_DAYS
               value: "30"
+            - name: ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: admin-username
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: admin-password
           resources:
             requests:
               cpu: 200m
