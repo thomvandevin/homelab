@@ -1,0 +1,385 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: van-mierlo
+  labels:
+    name: van-mierlo
+---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: van-mierlo-deployer
+  namespace: van-mierlo
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-van-mierlo-deploy
+  namespace: van-mierlo
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: van-mierlo-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# -- Secrets ------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-secret
+  namespace: van-mierlo
+data:
+  password: {{ .Values.db.password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: app-secret
+  namespace: van-mierlo
+data:
+  jwt-secret: {{ .Values.vanmierlo.jwt.secret | b64enc | quote }}
+  minio-access-key: {{ .Values.vanmierlo.minio.accessKey | b64enc | quote }}
+  minio-secret-key: {{ .Values.vanmierlo.minio.secretKey | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: van-mierlo
+data:
+  .dockerconfigjson: {{ .Values.vanmierlo.gitlab.registry | quote }}
+---
+# -- MinIO (object storage for file uploads) -----------------------------------
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: minio-secret
+  namespace: van-mierlo
+data:
+  root-password: {{ .Values.minio.rootPassword | b64enc | quote }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: van-mierlo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: van-mierlo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: van-mierlo-minio
+  template:
+    metadata:
+      labels:
+        app: van-mierlo-minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          command:
+            - minio
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+          env:
+            - name: MINIO_ROOT_USER
+              value: minioadmin
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: root-password
+          ports:
+            - containerPort: 9000
+              name: api
+            - containerPort: 9001
+              name: console
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-svc
+  namespace: van-mierlo
+spec:
+  type: ClusterIP
+  selector:
+    app: van-mierlo-minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+# -- MinIO bucket init job (PostSync — runs after MinIO deployment is ready) ---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-init-buckets
+  namespace: van-mierlo
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      containers:
+        - name: mc
+          image: minio/mc:latest
+          command:
+            - sh
+            - -c
+            - |
+              sleep 10
+              mc alias set local http://minio-svc:9000 minioadmin "$MINIO_ROOT_PASSWORD"
+              mc mb --ignore-existing local/margin-calculator
+          env:
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: root-password
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      restartPolicy: OnFailure
+---
+# -- Database init job (PostSync — runs after secrets are available) -----------
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: van-mierlo-db-init
+  namespace: van-mierlo
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      containers:
+        - name: db-init
+          image: postgres:16-alpine
+          env:
+            - name: PGHOST
+              value: postgresql.db-system.svc.cluster.local
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+          command:
+            - sh
+            - -c
+            - |
+              psql -tc "SELECT 1 FROM pg_database WHERE datname = 'margin_calculator'" | grep -q 1 || psql -c "CREATE DATABASE margin_calculator"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      restartPolicy: OnFailure
+---
+# -- Backend deployment --------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: van-mierlo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: van-mierlo-backend
+  template:
+    metadata:
+      labels:
+        app: van-mierlo-backend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: backend
+          image: registry.gitlab.com/thomvandevin-projects/van-mierlo-margin-calculator/backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgresql.db-system.svc.cluster.local:5432/margin_calculator
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: validate
+            - name: SPRING_FLYWAY_ENABLED
+              value: "true"
+            - name: APP_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: jwt-secret
+            - name: APP_MINIO_ENDPOINT
+              value: http://minio-svc:9000
+            - name: APP_MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: minio-access-key
+            - name: APP_MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: minio-secret-key
+            - name: APP_MINIO_BUCKET
+              value: margin-calculator
+            - name: APP_SIGNUP_ENABLED
+              value: "false"
+            - name: APP_CORS_ALLOWED_ORIGINS
+              value: "https://vanmierlo.thomvandev.in"
+            - name: APP_SESSION_UNNAMED_CLEANUP_DAYS
+              value: "30"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+---
+# -- Frontend deployment -------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: van-mierlo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: van-mierlo-frontend
+  template:
+    metadata:
+      labels:
+        app: van-mierlo-frontend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: frontend
+          image: registry.gitlab.com/thomvandevin-projects/van-mierlo-margin-calculator/frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+# -- Services ------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-svc
+  namespace: van-mierlo
+spec:
+  type: ClusterIP
+  selector:
+    app: van-mierlo-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-svc
+  namespace: van-mierlo
+spec:
+  type: ClusterIP
+  selector:
+    app: van-mierlo-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

@@ -73,6 +73,9 @@ spec:
             # Sharry
             - hostname: sharry.thomvandev.in
               service: http://sharry.sharry.svc.cluster.local:9090
+            # Van Mierlo Margin Calculator
+            - hostname: vanmierlo.thomvandev.in
+              service: http://frontend-svc.van-mierlo.svc.cluster.local:80
   destination:
     namespace: cloudflare-tunnel
     server: https://kubernetes.default.svc
