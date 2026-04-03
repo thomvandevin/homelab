@@ -25,6 +25,14 @@ spec:
     targetRevision: 16.7.27
     helm:
       valuesObject:
+        primary:
+          resources:
+            limits:
+              cpu: 250m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
         global:
           postgresql:
             auth:
