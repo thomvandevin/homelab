@@ -1,0 +1,278 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pokemon-ai
+  labels:
+    name: pokemon-ai
+---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pokemon-ai-deployer
+  namespace: pokemon-ai
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-pokemon-ai-deploy
+  namespace: pokemon-ai
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: pokemon-ai-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# -- Secrets ------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-secret
+  namespace: pokemon-ai
+data:
+  password: {{ .Values.db.password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: api-secret
+  namespace: pokemon-ai
+data:
+  openrouter-api-key: {{ .Values.pokemon_ai.openrouter_api_key | b64enc | quote }}
+  openai-api-key: {{ .Values.pokemon_ai.openai_api_key | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: pokemon-ai
+data:
+  .dockerconfigjson: {{ .Values.pokemon_ai.registry | quote }}
+---
+# -- Database init job ---------------------------------------------------------
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pokemon-ai-db-init
+  namespace: pokemon-ai
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      containers:
+        - name: db-init
+          image: postgres:17-alpine
+          env:
+            - name: PGHOST
+              value: postgresql.db-system.svc.cluster.local
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+          command:
+            - sh
+            - -c
+            - |
+              psql -tc "SELECT 1 FROM pg_database WHERE datname = 'pokemon_ai'" | grep -q 1 || psql -c "CREATE DATABASE pokemon_ai"
+              psql -d pokemon_ai -c "CREATE EXTENSION IF NOT EXISTS vector"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      restartPolicy: OnFailure
+---
+# -- Backend ------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: pokemon-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: backend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-ai/backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: postgresql.db-system.svc.cluster.local
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: pokemon_ai
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: openrouter-api-key
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: openai-api-key
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: pokemon-ai
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+# -- Frontend -----------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: pokemon-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: frontend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-ai/frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: pokemon-ai
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# -- MCP Server ---------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+  namespace: pokemon-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-server
+  template:
+    metadata:
+      labels:
+        app: mcp-server
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: mcp-server
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-ai/mcp-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-server
+  namespace: pokemon-ai
+spec:
+  selector:
+    app: mcp-server
+  ports:
+    - port: 3001
+      targetPort: 3001
+---
+# -- Tailscale Ingress (internal only) ----------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pokemon-ai
+  namespace: pokemon-ai
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - pokemon-ai
