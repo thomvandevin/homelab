@@ -7,15 +7,6 @@ metadata:
 data:
   password: {{ .Values.db.password | b64enc | quote }}
 ---
-apiVersion: v1
-kind: Secret
-type: kubernetes.io/dockerconfigjson
-metadata:
-  name: gitlab-registry-secret
-  namespace: db-system
-data:
-  .dockerconfigjson: {{ .Values.pokemon_ai.registry | quote }}
----
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -34,12 +25,6 @@ spec:
     targetRevision: 16.7.27
     helm:
       valuesObject:
-        image:
-          registry: registry.gitlab.com
-          repository: thomvandevin-projects/pokemon-ai/postgresql
-          tag: latest
-          pullSecrets:
-            - gitlab-registry-secret
         primary:
           resources:
             limits:

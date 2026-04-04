@@ -59,45 +59,68 @@ metadata:
 data:
   .dockerconfigjson: {{ .Values.pokemon_ai.registry | quote }}
 ---
-# -- Database init job ---------------------------------------------------------
-apiVersion: batch/v1
-kind: Job
+# -- PostgreSQL (pgvector) ----------------------------------------------------
+apiVersion: apps/v1
+kind: StatefulSet
 metadata:
-  name: pokemon-ai-db-init
+  name: postgresql
   namespace: pokemon-ai
-  annotations:
-    argocd.argoproj.io/hook: Sync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
+  serviceName: postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
   template:
+    metadata:
+      labels:
+        app: postgresql
     spec:
       containers:
-        - name: db-init
-          image: postgres:17-alpine
+        - name: postgresql
+          image: pgvector/pgvector:0.8.2-pg17
+          ports:
+            - containerPort: 5432
           env:
-            - name: PGHOST
-              value: postgresql.db-system.svc.cluster.local
-            - name: PGUSER
+            - name: POSTGRES_DB
+              value: pokemon_ai
+            - name: POSTGRES_USER
               value: postgres
-            - name: PGPASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: db-secret
                   key: password
-          command:
-            - sh
-            - -c
-            - |
-              psql -tc "SELECT 1 FROM pg_database WHERE datname = 'pokemon_ai'" | grep -q 1 || psql -c "CREATE DATABASE pokemon_ai"
-              psql -d pokemon_ai -c "CREATE EXTENSION IF NOT EXISTS vector"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
               cpu: 100m
-              memory: 128Mi
-      restartPolicy: OnFailure
+              memory: 256Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: pokemon-ai
+spec:
+  selector:
+    app: postgresql
+  ports:
+    - port: 5432
+      targetPort: 5432
 ---
 # -- Backend ------------------------------------------------------------------
 apiVersion: apps/v1
@@ -125,7 +148,7 @@ spec:
             - containerPort: 8080
           env:
             - name: DB_HOST
-              value: postgresql.db-system.svc.cluster.local
+              value: postgresql.pokemon-ai.svc.cluster.local
             - name: DB_PORT
               value: "5432"
             - name: DB_NAME
