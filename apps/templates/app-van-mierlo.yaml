@@ -167,41 +167,42 @@ spec:
       targetPort: 9001
 ---
 # -- MinIO bucket init job (PostSync — runs after MinIO deployment is ready) ---
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: minio-init-buckets
-  namespace: van-mierlo
-  annotations:
-    argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
-spec:
-  template:
-    spec:
-      containers:
-        - name: mc
-          image: minio/mc:latest
-          command:
-            - sh
-            - -c
-            - |
-              sleep 10
-              mc alias set local http://minio-svc:9000 minioadmin "$MINIO_ROOT_PASSWORD"
-              mc mb --ignore-existing local/margin-calculator
-          env:
-            - name: MINIO_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: minio-secret
-                  key: root-password
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 100m
-              memory: 128Mi
-      restartPolicy: OnFailure
+# Disabled while MinIO replicas=0; re-enable when scaling back up
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: minio-init-buckets
+#   namespace: van-mierlo
+#   annotations:
+#     argocd.argoproj.io/hook: PostSync
+#     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+# spec:
+#   template:
+#     spec:
+#       containers:
+#         - name: mc
+#           image: minio/mc:latest
+#           command:
+#             - sh
+#             - -c
+#             - |
+#               sleep 10
+#               mc alias set local http://minio-svc:9000 minioadmin "$MINIO_ROOT_PASSWORD"
+#               mc mb --ignore-existing local/margin-calculator
+#           env:
+#             - name: MINIO_ROOT_PASSWORD
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: minio-secret
+#                   key: root-password
+#           resources:
+#             requests:
+#               cpu: 50m
+#               memory: 64Mi
+#             limits:
+#               cpu: 100m
+#               memory: 128Mi
+#       restartPolicy: OnFailure
 ---
 # -- Database init job (PostSync — runs after secrets are available) -----------
 apiVersion: batch/v1
