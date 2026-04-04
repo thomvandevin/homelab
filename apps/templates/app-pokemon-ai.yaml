@@ -61,12 +61,11 @@ data:
 ---
 # -- PostgreSQL (pgvector) ----------------------------------------------------
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: postgresql
   namespace: pokemon-ai
 spec:
-  serviceName: postgresql
   replicas: 1
   selector:
     matchLabels:
@@ -103,14 +102,9 @@ spec:
             limits:
               cpu: 250m
               memory: 512Mi
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 2Gi
+      volumes:
+        - name: data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
