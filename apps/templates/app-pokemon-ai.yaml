@@ -49,6 +49,7 @@ metadata:
 data:
   openrouter-api-key: {{ .Values.pokemon_ai.openrouter_api_key | b64enc | quote }}
   openai-api-key: {{ .Values.pokemon_ai.openai_api_key | b64enc | quote }}
+  app-password: {{ .Values.pokemon_ai.app_password | b64enc | quote }}
 ---
 apiVersion: v1
 kind: Secret
@@ -166,6 +167,11 @@ spec:
                 secretKeyRef:
                   name: api-secret
                   key: openai-api-key
+            - name: APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: app-password
           resources:
             requests:
               cpu: 200m
