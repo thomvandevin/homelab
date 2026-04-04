@@ -91,7 +91,7 @@ metadata:
   name: minio
   namespace: van-mierlo
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: van-mierlo-minio
@@ -249,7 +249,7 @@ metadata:
   name: backend
   namespace: van-mierlo
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: van-mierlo-backend
@@ -342,7 +342,7 @@ metadata:
   name: frontend
   namespace: van-mierlo
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: van-mierlo-frontend
