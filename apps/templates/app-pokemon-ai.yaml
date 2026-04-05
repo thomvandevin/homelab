@@ -119,27 +119,27 @@ spec:
     - port: 5432
       targetPort: 5432
 ---
-# -- Backend ------------------------------------------------------------------
+# -- Chat API (formerly backend) ----------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
+  name: chat-api
   namespace: pokemon-ai
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: backend
+      app: chat-api
   template:
     metadata:
       labels:
-        app: backend
+        app: chat-api
     spec:
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
-        - name: backend
-          image: registry.gitlab.com/thomvandevin-projects/pokemon-ai/backend:latest
+        - name: chat-api
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-ai/chat-api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -183,36 +183,36 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend
+  name: chat-api
   namespace: pokemon-ai
 spec:
   selector:
-    app: backend
+    app: chat-api
   ports:
     - port: 8080
       targetPort: 8080
 ---
-# -- Frontend -----------------------------------------------------------------
+# -- Chat UI (formerly frontend) ----------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: chat-ui
   namespace: pokemon-ai
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: frontend
+      app: chat-ui
   template:
     metadata:
       labels:
-        app: frontend
+        app: chat-ui
     spec:
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
-        - name: frontend
-          image: registry.gitlab.com/thomvandevin-projects/pokemon-ai/frontend:latest
+        - name: chat-ui
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-ai/chat-ui:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -227,11 +227,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend
+  name: chat-ui
   namespace: pokemon-ai
 spec:
   selector:
-    app: frontend
+    app: chat-ui
   ports:
     - port: 80
       targetPort: 80
@@ -293,7 +293,7 @@ spec:
         paths:
           - backend:
               service:
-                name: frontend
+                name: chat-ui
                 port:
                   number: 80
             path: "/"
