@@ -172,6 +172,8 @@ spec:
                 secretKeyRef:
                   name: api-secret
                   key: app-password
+            - name: CARD_API_URL
+              value: "http://card-api.pokemon-ai.svc.cluster.local:8081"
           resources:
             requests:
               cpu: 200m
@@ -191,6 +193,82 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
+---
+# -- Card API ----------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: card-api
+  namespace: pokemon-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: card-api
+  template:
+    metadata:
+      labels:
+        app: card-api
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      initContainers:
+        - name: create-db
+          image: postgres:17-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgresql.pokemon-ai.svc.cluster.local -p 5432; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              PGPASSWORD=$DB_PASSWORD psql -h postgresql.pokemon-ai.svc.cluster.local -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'pokemon_cards'" | grep -q 1 || PGPASSWORD=$DB_PASSWORD psql -h postgresql.pokemon-ai.svc.cluster.local -U postgres -c "CREATE DATABASE pokemon_cards"
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+      containers:
+        - name: card-api
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-ai/card-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DB_HOST
+              value: postgresql.pokemon-ai.svc.cluster.local
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: pokemon_cards
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: card-api
+  namespace: pokemon-ai
+spec:
+  selector:
+    app: card-api
+  ports:
+    - port: 8081
+      targetPort: 8081
 ---
 # -- Chat UI (formerly frontend) ----------------------------------------------
 apiVersion: apps/v1
