@@ -72,6 +72,38 @@
   ];
   virtualisation.docker.logDriver = "json-file";
 
+  # Delete stale Longhorn webhooks on boot to prevent deadlock.
+  # Longhorn webhooks intercept Node resources with failurePolicy=Fail.
+  # After a reboot, Longhorn pods aren't running yet to serve the webhooks,
+  # which blocks k3s/flannel from annotating the Node, preventing all pod
+  # networking from initializing. Longhorn manager recreates these webhooks
+  # once its pods are running.
+  systemd.services.k3s-longhorn-webhook-cleanup = {
+    description = "Delete stale Longhorn admission webhooks to prevent boot deadlock";
+    after = [ "k3s.service" ];
+    requires = [ "k3s.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    path = [ pkgs.k3s pkgs.coreutils ];
+    script = ''
+      export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+
+      # Wait for the API server to be reachable
+      for i in $(seq 1 30); do
+        if k3s kubectl get nodes > /dev/null 2>&1; then
+          break
+        fi
+        sleep 2
+      done
+
+      k3s kubectl delete validatingwebhookconfiguration longhorn-webhook-validator --ignore-not-found
+      k3s kubectl delete mutatingwebhookconfiguration longhorn-webhook-mutator --ignore-not-found
+    '';
+  };
+
   # Enable the X11 windowing system.
   # services.xserver.enable = true;
 
