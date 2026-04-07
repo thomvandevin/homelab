@@ -269,7 +269,7 @@
       fi
 
       # otherwise authenticate with tailscale
-      ${tailscale}/bin/tailscale up --reset --authkey $(cat ${config.sops.secrets.tailscale-auth-key.path})
+      ${tailscale}/bin/tailscale up --reset --authkey $(cat ${config.sops.secrets.tailscale-auth-key.path}) || true
     '';
   };
 
