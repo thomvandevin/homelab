@@ -251,6 +251,9 @@
     ];
     wantedBy = [ "multi-user.target" ];
 
+    # only needed on boot, not during nixos-rebuild switch
+    restartIfChanged = false;
+
     # set this service as a oneshot job
     serviceConfig.Type = "oneshot";
 
