@@ -57,6 +57,9 @@ spec:
             # Pokemon AI
             - hostname: pokemon-ai.thomvandev.in
               service: http://chat-ui.pokemon-ai.svc.cluster.local:80
+            # G Block Showcase
+            - hostname: gblock.thomvandev.in
+              service: http://showcase-ui.pokemon-ai.svc.cluster.local:80
             # Decklist
             - hostname: decklists.thomvandev.in
               service: http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local:80
