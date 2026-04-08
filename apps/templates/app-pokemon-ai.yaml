@@ -371,6 +371,50 @@ spec:
     - port: 3001
       targetPort: 3001
 ---
+# -- Showcase UI (G Block) ---------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: showcase-ui
+  namespace: pokemon-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: showcase-ui
+  template:
+    metadata:
+      labels:
+        app: showcase-ui
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: showcase-ui
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-ai/showcase-ui:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: showcase-ui
+  namespace: pokemon-ai
+spec:
+  selector:
+    app: showcase-ui
+  ports:
+    - port: 80
+      targetPort: 80
+---
 # -- Tailscale Ingress (internal only) ----------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: Ingress
