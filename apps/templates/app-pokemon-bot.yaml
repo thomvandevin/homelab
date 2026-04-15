@@ -57,7 +57,7 @@ metadata:
   namespace: pokemon-bot
 spec:
   serviceName: rabbitmq
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: rabbitmq
@@ -170,7 +170,7 @@ metadata:
   name: dashboard-backend
   namespace: pokemon-bot
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: dashboard-backend
@@ -225,7 +225,7 @@ metadata:
   name: dashboard-frontend
   namespace: pokemon-bot
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: dashboard-frontend
@@ -269,7 +269,7 @@ metadata:
   name: scraper-backend
   namespace: pokemon-bot
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: scraper-backend
@@ -331,7 +331,7 @@ metadata:
   name: notifications-backend
   namespace: pokemon-bot
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: notifications-backend
@@ -393,7 +393,7 @@ metadata:
   name: checkout-backend
   namespace: pokemon-bot
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: checkout-backend
@@ -455,7 +455,7 @@ metadata:
   name: scraper-frontend
   namespace: pokemon-bot
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: scraper-frontend
@@ -499,7 +499,7 @@ metadata:
   name: notifications-frontend
   namespace: pokemon-bot
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: notifications-frontend
@@ -543,7 +543,7 @@ metadata:
   name: checkout-frontend
   namespace: pokemon-bot
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: checkout-frontend

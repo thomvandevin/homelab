@@ -70,7 +70,7 @@ metadata:
   name: postgresql
   namespace: pokemon-ai
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: postgresql
@@ -129,7 +129,7 @@ metadata:
   name: chat-api
   namespace: pokemon-ai
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: chat-api
@@ -204,7 +204,7 @@ metadata:
   name: card-api
   namespace: pokemon-ai
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: card-api
@@ -280,7 +280,7 @@ metadata:
   name: chat-ui
   namespace: pokemon-ai
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: chat-ui
@@ -324,7 +324,7 @@ metadata:
   name: mcp-server
   namespace: pokemon-ai
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: mcp-server
@@ -378,7 +378,7 @@ metadata:
   name: showcase-ui
   namespace: pokemon-ai
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: showcase-ui
