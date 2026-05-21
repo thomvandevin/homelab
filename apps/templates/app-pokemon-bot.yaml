@@ -304,6 +304,8 @@ spec:
               value: guest
             - name: SPRING_RABBITMQ_PASSWORD
               value: guest
+            - name: FLARESOLVERR_URL
+              value: http://flaresolverr.flaresolverr.svc.cluster.local:8191
           resources:
             requests:
               cpu: 200m
