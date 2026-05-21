@@ -38,6 +38,14 @@ spec:
             limits:
               cpu: 1000m
               memory: 1Gi
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
 ---
 apiVersion: v1
 kind: Service
