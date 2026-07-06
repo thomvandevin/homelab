@@ -5,6 +5,7 @@
     "default:automergeDigest",
     "docker:pinDigests"
   ],
+  "dependencyDashboard": false,
   "packageRules": [
     {
       "matchUpdateTypes": [
@@ -14,33 +15,48 @@
         "digest"
       ],
       "automerge": true
+    },
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "PostgreSQL major upgrades need a manual data migration (pg_upgrade/dump-restore) - never propose them automatically",
+      "matchPackageNames": [
+        "registry-1.docker.io/bitnamicharts/postgresql",
+        "postgres",
+        "pgvector/pgvector"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
     }
   ],
   "argocd": {
-    "fileMatch": [
-      "apps/templates/.+\\.yaml$"
+    "managerFilePatterns": [
+      "/apps/templates/.+\\.yaml$/"
     ]
   },
   "kubernetes": {
-    "fileMatch": [
-      "apps/templates/.+\\.yaml$"
+    "managerFilePatterns": [
+      "/apps/templates/.+\\.yaml$/"
     ]
   },
   "lockFileMaintenance": {
-    "enabled": true
+    "enabled": false
   },
   "nix": {
-    "enabled": true,
-    "fileMatch": [
-      "(^|/)nixos/flake\\.nix$"
-    ]
+    "enabled": false
   },
   "customManagers": [
     {
       "customType": "regex",
       "datasourceTemplate": "docker",
-      "fileMatch": [
-        "apps/templates/helm-factorio.yaml$"
+      "managerFilePatterns": [
+        "/apps/templates/helm-factorio.yaml$/"
       ],
       "matchStrings": [
         "#\\s?renovate: image=(?<depName>.*?)\\s+?tag:\\s?\\\"?(?<currentValue>[\\w+\\.\\-]*)(@(?<currentDigest>sha256:[0-9a-f]*))?\\\"?"
