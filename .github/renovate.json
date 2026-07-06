@@ -23,6 +23,17 @@
       "automerge": false
     },
     {
+      "description": "Longhorn feature releases (1.x minors) are one-way storage upgrades - keep them manual, only automerge patches",
+      "matchPackageNames": [
+        "longhorn"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "automerge": false
+    },
+    {
       "description": "PostgreSQL major upgrades need a manual data migration (pg_upgrade/dump-restore) - never propose them automatically",
       "matchPackageNames": [
         "registry-1.docker.io/bitnamicharts/postgresql",
