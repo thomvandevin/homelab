@@ -35,4 +35,5 @@ jobs:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_PLATFORM_COMMIT: enabled
           RENOVATE_ONBOARDING: "false"
+          RENOVATE_PR_HOURLY_LIMIT: "0"
           LOG_LEVEL: info
