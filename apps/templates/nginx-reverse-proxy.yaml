@@ -49,7 +49,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: nginx:1.29@sha256:341bf0f3ce6c5277d6002cf6e1fb0319fa4252add24ab6a0e262e0056d313208
+          image: nginx:1.29@sha256:1881968aff6f7cdcc4b888c00a11f4ce241ad7ec957e0cb4a9e19e93a3ff87ea
           volumeMounts:
             - name: nginx-config
               mountPath: /etc/nginx/conf.d
