@@ -68,7 +68,7 @@ spec:
     spec:
       containers:
         - name: rabbitmq
-          image: rabbitmq:4.3-management-alpine@sha256:ef984b2131c208a5323c72483071c03747768b0467a5a97875a68fc928b41230
+          image: rabbitmq:4.3-management-alpine@sha256:4c826054a20e917bca5ada86225329a97585ee393300439c0d9b46ece45977cb
           ports:
             - containerPort: 5672
             - containerPort: 15672
