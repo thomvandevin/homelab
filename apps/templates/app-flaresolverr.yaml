@@ -33,11 +33,14 @@ spec:
               value: Europe/Amsterdam
           resources:
             requests:
-              cpu: 200m
-              memory: 512Mi
-            limits:
-              cpu: 1000m
+              cpu: 500m
               memory: 1Gi
+            # Headless Chromium solving Cloudflare challenges is memory- and CPU-hungry;
+            # the previous 1Gi limit / 256Mi shm caused OOM restarts and
+            # "session not created: chrome not reachable" crashes under load.
+            limits:
+              cpu: "2"
+              memory: 3Gi
           volumeMounts:
             - name: dshm
               mountPath: /dev/shm
@@ -45,7 +48,7 @@ spec:
         - name: dshm
           emptyDir:
             medium: Memory
-            sizeLimit: 256Mi
+            sizeLimit: 1Gi
 ---
 apiVersion: v1
 kind: Service
