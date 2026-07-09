@@ -148,6 +148,10 @@ metadata:
   namespace: closet
 spec:
   replicas: 1
+  # Node runs near CPU capacity; a single replica can't surge, so replace
+  # the old pod before creating the new one instead of needing 2x headroom.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: closet-server
@@ -246,6 +250,9 @@ metadata:
   namespace: closet
 spec:
   replicas: 1
+  # See closet-server: replace-then-create to avoid needing surge headroom.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: closet-web
