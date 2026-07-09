@@ -1,0 +1,292 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: closet
+  labels:
+    name: closet
+---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: closet-deployer
+  namespace: closet
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-closet-deploy
+  namespace: closet
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: closet-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# -- Secrets ------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-secret
+  namespace: closet
+data:
+  password: {{ .Values.db.password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: app-secret
+  namespace: closet
+data:
+  minio-access-key: {{ .Values.closet.minio.access_key | b64enc | quote }}
+  minio-secret-key: {{ .Values.closet.minio.secret_key | b64enc | quote }}
+  smtp-username: {{ .Values.closet.smtp.username | b64enc | quote }}
+  smtp-password: {{ .Values.closet.smtp.password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: closet
+data:
+  .dockerconfigjson: {{ .Values.closet.gitlab.registry | quote }}
+---
+# -- MinIO (object storage for garment photos, used from milestone 05) ---------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: closet
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: closet
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          args: ["server", "/data", "--console-address", ":9001"]
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: minio-access-key
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: minio-secret-key
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-svc
+  namespace: closet
+spec:
+  selector:
+    app: minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+# -- Server ---------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: closet-server
+  namespace: closet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: closet-server
+  template:
+    metadata:
+      labels:
+        app: closet-server
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: closet-server
+          image: registry.gitlab.com/thomvandevin-projects/closet/server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgresql.db-system.svc.cluster.local:5432/closet
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: CLOSET_AUTH_RPID
+              value: closet.thomvandev.in
+            - name: CLOSET_AUTH_ALLOWEDORIGINS
+              value: https://closet.thomvandev.in
+            - name: CLOSET_AUTH_PUBLICURL
+              value: https://closet.thomvandev.in
+            - name: SMTP_HOST
+              value: smtp-relay.brevo.com
+            - name: SMTP_PORT
+              value: "587"
+            - name: SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: smtp-username
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: smtp-password
+            - name: MAIL_FROM
+              value: closet@thomvandev.in
+            - name: S3_ENDPOINT
+              value: http://minio-svc.closet.svc.cluster.local:9000
+            - name: S3_BUCKET
+              value: closet
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: minio-access-key
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: minio-secret-key
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: closet-server-svc
+  namespace: closet
+spec:
+  selector:
+    app: closet-server
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+# -- Web (nginx serving the SPA, proxying /api to the server) -------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: closet-web
+  namespace: closet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: closet-web
+  template:
+    metadata:
+      labels:
+        app: closet-web
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: closet-web
+          image: registry.gitlab.com/thomvandevin-projects/closet/web:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+            - name: API_UPSTREAM
+              value: http://closet-server-svc.closet.svc.cluster.local:8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: closet-web-svc
+  namespace: closet
+spec:
+  selector:
+    app: closet-web
+  ports:
+    - port: 80
+      targetPort: 80

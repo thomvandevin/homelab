@@ -82,6 +82,9 @@ spec:
             # Van Mierlo Margin Calculator
             - hostname: vanmierlo.thomvandev.in
               service: http://frontend-svc.van-mierlo.svc.cluster.local:80
+            # Closet
+            - hostname: closet.thomvandev.in
+              service: http://closet-web-svc.closet.svc.cluster.local:80
   destination:
     namespace: cloudflare-tunnel
     server: https://kubernetes.default.svc
