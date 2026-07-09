@@ -81,7 +81,7 @@ spec:
     spec:
       containers:
         - name: postgresql
-          image: pgvector/pgvector:0.8.4-pg17@sha256:dd467f03ca5c5581222490e5217e48a262864ccb659be559f8491bbafdc97da0
+          image: pgvector/pgvector:0.8.5-pg17@sha256:d2ef61f42ef767baa5a1475393303cc235bcd92febd9d7014eddb48b41f3bad0
           ports:
             - containerPort: 5432
           env:
