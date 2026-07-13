@@ -45,6 +45,10 @@ spec:
                 namespace = "gitlab-runner"
                 image = "ubuntu:22.04"
                 service_account = "gitlab-ci-job"
+                # docker-in-docker for the closet image builds and
+                # Testcontainers test jobs (all CI moved off gitlab.com
+                # shared runners to stay within compute minutes)
+                privileged = true
   destination:
     namespace: gitlab-runner
     server: https://kubernetes.default.svc
