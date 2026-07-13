@@ -102,7 +102,7 @@ spec:
     spec:
       containers:
         - name: minio
-          image: minio/minio:latest
+          image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
           command:
             - minio
             - server
@@ -218,7 +218,7 @@ spec:
     spec:
       containers:
         - name: db-init
-          image: postgres:16-alpine
+          image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
           env:
             - name: PGHOST
               value: postgresql.db-system.svc.cluster.local
