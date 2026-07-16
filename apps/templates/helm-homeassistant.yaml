@@ -42,6 +42,11 @@ spec:
           - name: conbee-usb
             hostPath:
               path: /dev/ttyACM0
+              # CharDevice makes kubelet require an existing character device and
+              # refuse to create a placeholder directory when the node is absent.
+              # Without this, a pod start while the ConBee is unplugged leaves an
+              # empty dir at /dev/ttyACM0 that shadows the real serial node.
+              type: CharDevice
         additionalMounts:
           - name: conbee-usb
             mountPath: /dev/ttyACM0
