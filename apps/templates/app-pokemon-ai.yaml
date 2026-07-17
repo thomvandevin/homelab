@@ -61,7 +61,7 @@ metadata:
   name: gitlab-registry-secret
   namespace: pokemon-ai
 data:
-  .dockerconfigjson: {{ .Values.pokemon_ai.registry | quote }}
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
 ---
 # -- PostgreSQL (pgvector) ----------------------------------------------------
 apiVersion: apps/v1

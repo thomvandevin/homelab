@@ -63,7 +63,7 @@ metadata:
   name: gitlab-registry-secret
   namespace: closet
 data:
-  .dockerconfigjson: {{ .Values.closet.gitlab.registry | quote }}
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
 ---
 # -- MinIO (object storage for garment photos, used from milestone 05) ---------
 apiVersion: v1
