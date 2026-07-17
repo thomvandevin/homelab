@@ -53,6 +53,8 @@ data:
   smtp-password: {{ .Values.closet.smtp.password | b64enc | quote }}
   openrouter-api-key: {{ .Values.closet.openrouter.api_key | b64enc | quote }}
   ai-internal-token: {{ .Values.closet.ai.internal_token | b64enc | quote }}
+  # blank until a key is set → closet-ai falls back to StubWebDetection (off)
+  google-vision-api-key: {{ .Values.closet.google_vision.api_key | default "" | b64enc | quote }}
 ---
 apiVersion: v1
 kind: Secret
@@ -325,6 +327,7 @@ metadata:
   namespace: closet
 spec:
   replicas: 1
+  # See closet-server: replace-then-create to avoid needing surge headroom.
   strategy:
     type: Recreate
   selector:
@@ -369,8 +372,18 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: openrouter-api-key
+            # blank when the secret is empty → reverse image search stays off
+            - name: GOOGLE_VISION_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: google-vision-api-key
           resources:
             requests:
+              # deliberately tiny: the node runs at ~96% CPU *requests*, and a
+              # bigger reservation here starved closet-server's Recreate
+              # rollout. closet-ai is IO-bound (waiting on OpenRouter), so it
+              # needs scheduling headroom, not a real CPU share.
               cpu: 25m
               memory: 256Mi
             limits:
