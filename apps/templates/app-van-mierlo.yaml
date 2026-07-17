@@ -60,7 +60,7 @@ metadata:
   name: gitlab-registry-secret
   namespace: van-mierlo
 data:
-  .dockerconfigjson: {{ .Values.vanmierlo.gitlab.registry | quote }}
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
 ---
 # -- MinIO (object storage for file uploads) -----------------------------------
 apiVersion: v1

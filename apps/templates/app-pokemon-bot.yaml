@@ -47,7 +47,7 @@ metadata:
   name: gitlab-registry-secret
   namespace: pokemon-bot
 data:
-  .dockerconfigjson: {{ .Values.pokemon_bot.registry | quote }}
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
 ---
 # -- RabbitMQ -----------------------------------------------------------------
 apiVersion: apps/v1
