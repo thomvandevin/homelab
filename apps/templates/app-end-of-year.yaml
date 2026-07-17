@@ -5,14 +5,39 @@ metadata:
   labels:
     name: end-of-year
 ---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: end-of-year-deployer
+  namespace: end-of-year
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-end-of-year-deploy
+  namespace: end-of-year
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: end-of-year-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: v1
 kind: Secret
 type: kubernetes.io/dockerconfigjson
 metadata:
-  name: gcr-end-of-year-secret
+  name: gitlab-registry-secret
   namespace: end-of-year
 data:
-  .dockerconfigjson: {{ .Values.gcr.end_of_year | quote }}
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -35,10 +60,11 @@ spec:
         app: end-of-year
     spec:
       imagePullSecrets:
-        - name: gcr-end-of-year-secret
+        - name: gitlab-registry-secret
       containers:
         - name: end-of-year
-          image: gcr.io/thomvandevin-end-of-year/end-of-year
+          image: registry.gitlab.com/thomvandevin-projects/end-of-year:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           readinessProbe:
