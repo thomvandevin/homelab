@@ -1,0 +1,64 @@
+# Dedicated GitLab runner for the swiss-rounds group, which is shared with an
+# external collaborator and lives outside thomvandevin-projects (so it can't use
+# the homelab-k3s group runner). Runs on the same cluster but fully isolated:
+# its own namespace, and unprivileged — swiss-rounds only builds with Kaniko, so
+# unlike the main runner it never needs node-level (dind) access.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gitlab-runner-swiss-rounds
+  labels:
+    name: gitlab-runner-swiss-rounds
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: gitlab-runner-swiss-rounds-secret
+  namespace: gitlab-runner-swiss-rounds
+data:
+  runner-registration-token: {{ .Values.gitlab.swiss_rounds_runner_token | b64enc | quote }}
+  runner-token: {{ .Values.gitlab.swiss_rounds_runner_token | b64enc | quote }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gitlab-ci-job
+  namespace: gitlab-runner-swiss-rounds
+automountServiceAccountToken: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitlab-runner-swiss-rounds
+  namespace: argocd
+spec:
+  project: default
+  syncPolicy:
+    automated:
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
+  source:
+    repoURL: https://charts.gitlab.io
+    chart: gitlab-runner
+    targetRevision: 0.90.1
+    helm:
+      valuesObject:
+        gitlabUrl: https://gitlab.com
+        rbac:
+          create: true
+        runners:
+          secret: gitlab-runner-swiss-rounds-secret
+          tags: "homelab"
+          config: |
+            [[runners]]
+              [runners.kubernetes]
+                namespace = "gitlab-runner-swiss-rounds"
+                image = "ubuntu:22.04"
+                service_account = "gitlab-ci-job"
+                # unprivileged: swiss-rounds builds with Kaniko, not dind
+                privileged = false
+  destination:
+    namespace: gitlab-runner-swiss-rounds
+    server: https://kubernetes.default.svc
