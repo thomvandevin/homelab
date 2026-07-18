@@ -5,14 +5,39 @@ metadata:
   labels:
     name: swiss-rounds
 ---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: swiss-rounds-deployer
+  namespace: swiss-rounds
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-swiss-rounds-deploy
+  namespace: swiss-rounds
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner-swiss-rounds
+roleRef:
+  kind: Role
+  name: swiss-rounds-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: v1
 kind: Secret
 type: kubernetes.io/dockerconfigjson
 metadata:
-  name: gcr-swiss-rounds-secret
+  name: gitlab-registry-secret
   namespace: swiss-rounds
 data:
-  .dockerconfigjson: {{ .Values.gcr.swiss_rounds | quote }}
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -30,10 +55,11 @@ spec:
         app: swiss-rounds
     spec:
       imagePullSecrets:
-        - name: gcr-swiss-rounds-secret
+        - name: gitlab-registry-secret
       containers:
         - name: swiss-rounds
-          image: gcr.io/swiss-rounds/swiss-rounds
+          image: registry.gitlab.com/swiss-rounds/swiss-rounds:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
             - containerPort: 8443
