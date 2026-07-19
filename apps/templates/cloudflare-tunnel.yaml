@@ -68,6 +68,9 @@ spec:
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
             - hostname: swissrounds.app
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
+            # Staging must precede the wildcard: cloudflared is first-match
+            - hostname: hidden.swissrounds.app
+              service: http://swiss-rounds-stg-svc.swiss-rounds.svc.cluster.local
             - hostname: "*.swissrounds.app"
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
             # End of year
