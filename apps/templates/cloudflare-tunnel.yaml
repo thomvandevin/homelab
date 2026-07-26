@@ -61,6 +61,18 @@ spec:
             - hostname: gblock.thomvandev.in
               service: http://showcase-ui.pokemon-ai.svc.cluster.local:80
             # Decklist
+            # /preload and /cleanup are unauthenticated admin routes: one
+            # triggers a full scrape of Limitless, the other deletes cache
+            # rows. They were publicly reachable because this hostname
+            # routes every path.
+            #
+            # The preload and cleanup CronJobs call the service directly
+            # in-cluster, so they never traverse the tunnel and are
+            # unaffected. Must precede the catch-all below -- cloudflared
+            # is first-match.
+            - hostname: decklists.thomvandev.in
+              path: ^/(preload|cleanup)/?$
+              service: http_status:404
             - hostname: decklists.thomvandev.in
               service: http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local:80
             # Swiss Rounds
