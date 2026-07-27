@@ -176,6 +176,76 @@ spec:
                   memory: 128Mi
           restartPolicy: OnFailure
 ---
+# Officially sanctioned events -- Regionals, Internationals, Worlds -- scraped
+# from limitlesstcg.com and onepiece.limitlesstcg.com rather than the play site.
+#
+# Daily rather than 3-hourly: these events run on weekends, so a 3-hourly poll
+# would be almost entirely wasted requests against a source that has rate-limited
+# this project before.
+#
+# eventType defaults to 'community' on the route, so the three jobs above are
+# unaffected by this addition.
+#
+# Each tournament costs exactly two requests regardless of field size, because
+# /tournaments/{id}/decklists returns every list for an event in one response.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: limitless-preload-official-onepiece
+  namespace: limitless-tournament-decks
+spec:
+  schedule: "0 5 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:7c12af72ceb38b7432ab85e1a265cff6ae58e06f95539d539b654f2cfa64bb13
+              args:
+                - curl
+                - -X
+                - GET
+                - http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local/preload?game=OP&eventType=official&maxTournaments=10
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: limitless-preload-official-pokemon
+  namespace: limitless-tournament-decks
+spec:
+  # An hour after the One Piece job. The app's outbound throttle is a single
+  # global chain, so overlapping runs would serialise against each other anyway.
+  schedule: "0 6 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:7c12af72ceb38b7432ab85e1a265cff6ae58e06f95539d539b654f2cfa64bb13
+              args:
+                - curl
+                - -X
+                - GET
+                - http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local/preload?game=PTCG&eventType=official&maxTournaments=10
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+          restartPolicy: OnFailure
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
