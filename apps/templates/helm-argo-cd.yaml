@@ -79,8 +79,11 @@ spec:
               imagePullPolicy: IfNotPresent
               command: [sh, -ec]
               env:
+                # 4.7.x is required: argocd v3.5.0 ships Helm v4, which refuses
+                # to load the Helm 3 era plugin.yaml that 4.6.10 provides, so
+                # every `secrets://` values file fails to render.
                 - name: HELM_SECRETS_VERSION
-                  value: "4.6.10"
+                  value: "4.7.7"
                 - name: KUBECTL_VERSION
                   value: "1.30.2"
                 - name: VALS_VERSION
