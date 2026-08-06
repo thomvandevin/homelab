@@ -75,6 +75,9 @@ spec:
               service: http_status:404
             - hostname: decklists.thomvandev.in
               service: http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local:80
+            # Slowpoke Bingo
+            - hostname: slowpoke.thomvandev.in
+              service: http://slowpoke-bingo-svc.slowpoke-bingo.svc.cluster.local:80
             # Swiss Rounds
             - hostname: swissrounds.thomvandev.in
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
