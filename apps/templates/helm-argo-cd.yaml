@@ -51,8 +51,13 @@ spec:
               value: "true"
             - name: HELM_SECRETS_VALUES_ALLOW_PATH_TRAVERSAL
               value: "false"
+            # Must stay false under Helm 4. The wrapper rewrites `helm template`
+            # into `helm secrets template`, and Helm 4 registers helm-secrets as
+            # a getter only, so that subcommand no longer exists. Values are
+            # referenced as secrets://secrets.yaml, which the getter resolves
+            # directly, so the wrapper is not needed.
             - name: HELM_SECRETS_WRAPPER_ENABLED
-              value: "true"
+              value: "false"
             - name: HELM_SECRETS_DECRYPT_SECRETS_IN_TMP_DIR
               value: "true"
             - name: HELM_SECRETS_HELM_PATH
