@@ -1,0 +1,198 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: slowpoke-bingo
+  labels:
+    name: slowpoke-bingo
+---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: slowpoke-bingo-deployer
+  namespace: slowpoke-bingo
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-slowpoke-bingo-deploy
+  namespace: slowpoke-bingo
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: slowpoke-bingo-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-secret
+  namespace: slowpoke-bingo
+data:
+  password: {{ .Values.db.password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: slowpoke-bingo
+data:
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
+---
+# -- Create the database before the app starts ---------------------------------
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: slowpoke-bingo-db-init
+  namespace: slowpoke-bingo
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      containers:
+        - name: db-init
+          image: postgres:16-alpine
+          env:
+            - name: PGHOST
+              value: postgresql.db-system.svc.cluster.local
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+          command:
+            - sh
+            - -c
+            - |
+              psql -tc "SELECT 1 FROM pg_database WHERE datname = 'slowpoke_bingo_db'" | grep -q 1 || psql -c "CREATE DATABASE slowpoke_bingo_db"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      restartPolicy: OnFailure
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slowpoke-bingo
+  namespace: slowpoke-bingo
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: slowpoke-bingo
+  template:
+    metadata:
+      labels:
+        app: slowpoke-bingo
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: slowpoke-bingo
+          image: registry.gitlab.com/thomvandevin-projects/slowpoke-bingo:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: DATABASE_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@postgresql.db-system.svc.cluster.local:5432/slowpoke_bingo_db
+            - name: POSTGRES_POOL_MAX
+              value: "10"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slowpoke-bingo-svc
+  namespace: slowpoke-bingo
+spec:
+  type: ClusterIP
+  selector:
+    app: slowpoke-bingo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+---
+# -- Scraper -------------------------------------------------------------------
+# The first backfill walks roughly 140 tournaments against a site that regularly
+# stalls for minutes, so it may hit activeDeadlineSeconds and be killed. Sync is
+# incremental and idempotent, so the archive fills over several ticks.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: slowpoke-bingo-sync
+  namespace: slowpoke-bingo
+spec:
+  schedule: "0 */3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 10800
+      backoffLimit: 1
+      template:
+        spec:
+          imagePullSecrets:
+            - name: gitlab-registry-secret
+          containers:
+            - name: sync
+              image: registry.gitlab.com/thomvandevin-projects/slowpoke-bingo:latest
+              imagePullPolicy: Always
+              command: ["npm", "run", "sync"]
+              env:
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-secret
+                      key: password
+                - name: DATABASE_URL
+                  value: postgresql://postgres:$(POSTGRES_PASSWORD)@postgresql.db-system.svc.cluster.local:5432/slowpoke_bingo_db
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+          restartPolicy: OnFailure
