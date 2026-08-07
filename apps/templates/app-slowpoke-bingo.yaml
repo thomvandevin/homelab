@@ -140,6 +140,14 @@ spec:
               value: postgresql://postgres:$(POSTGRES_PASSWORD)@postgresql.db-system.svc.cluster.local:5432/slowpoke_bingo_db
             - name: POSTGRES_POOL_MAX
               value: "10"
+            - name: NODE_ENV
+              value: production
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: slowpoke-admin-secret
+                  key: password
+                  optional: true
           readinessProbe:
             httpGet:
               path: /
