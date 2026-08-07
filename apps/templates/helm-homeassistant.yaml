@@ -31,8 +31,21 @@ spec:
         configuration:
           enabled: true
           forceInit: true
-          trusted_proxies:
-            - 10.0.0.0/8 # k8s
+          # Chart default minus the http block: HTTP/trusted_proxies config is
+          # UI-managed (Settings > System > Network) and YAML support is removed in 2027.2.0
+          templateConfig: |-
+            default_config:
+
+            {{- if .Values.serviceMonitor.enabled }}
+            prometheus:
+            {{- end }}
+
+            frontend:
+              themes: !include_dir_merge_named themes
+
+            automation: !include automations.yaml
+            script: !include scripts.yaml
+            scene: !include scenes.yaml
         persistence:
           enabled: true
         hostNetwork: true
