@@ -372,6 +372,10 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: openrouter-api-key
+            # 2.1x the cost of gemini-3.1-flash-image, taken deliberately while
+            # the render is a proof of concept: flash shortens trouser legs
+            - name: OPENROUTER_IMAGE_MODEL
+              value: google/gemini-3-pro-image
             # blank when the secret is empty → reverse image search stays off
             - name: GOOGLE_VISION_API_KEY
               valueFrom:
