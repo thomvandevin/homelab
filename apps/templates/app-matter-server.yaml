@@ -48,6 +48,11 @@ spec:
           args:
             - --storage-path
             - /data
+            # Without this the SDK logs "Using 'None' as primary interface" and every
+            # mDNS advertisement fails with "No endpoint"; Thread devices are reached
+            # over IPv6 link-local, so it has to be pinned to the LAN interface
+            - --primary-interface
+            - enp1s0
           ports:
             - containerPort: 5580
               name: ws
