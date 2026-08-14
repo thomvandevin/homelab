@@ -245,7 +245,7 @@ spec:
                   key: ai-internal-token
           resources:
             requests:
-              cpu: 250m
+              cpu: 100m
               memory: 512Mi
             limits:
               cpu: "1"
