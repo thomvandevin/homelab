@@ -8,6 +8,60 @@ data:
   runner-registration-token: {{ .Values.gitlab.runner_token | b64enc | quote }}
   runner-token: {{ .Values.gitlab.runner_token | b64enc | quote }}
 ---
+# Distribution cache for CI. Reuses the closet MinIO rather than running a second
+# object store; the runner keeps its own bucket, separate from the app's data.
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: gitlab-runner-cache-secret
+  namespace: gitlab-runner
+data:
+  accesskey: {{ .Values.closet.minio.access_key | b64enc | quote }}
+  secretkey: {{ .Values.closet.minio.secret_key | b64enc | quote }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gitlab-runner-cache-bucket
+  namespace: gitlab-runner
+  annotations:
+    # The runner never creates the bucket itself, and a plain Job would be immutable
+    # across syncs, so run it as a self-deleting hook
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: minio/mc:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              mc alias set minio http://minio-svc.closet.svc.cluster.local:9000 "$ACCESS_KEY" "$SECRET_KEY"
+              mc mb --ignore-existing minio/gitlab-runner-cache
+          env:
+            - name: ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gitlab-runner-cache-secret
+                  key: accesskey
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gitlab-runner-cache-secret
+                  key: secretkey
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -39,6 +93,8 @@ spec:
         runners:
           secret: gitlab-runner-secret
           tags: "homelab"
+          cache:
+            secretName: gitlab-runner-cache-secret
           config: |
             [[runners]]
               [runners.kubernetes]
@@ -49,6 +105,16 @@ spec:
                 # Testcontainers test jobs (all CI moved off gitlab.com
                 # shared runners to stay within compute minutes)
                 privileged = true
+              [runners.cache]
+                Type = "s3"
+                Path = "gitlab-runner"
+                Shared = true
+                [runners.cache.s3]
+                  ServerAddress = "minio-svc.closet.svc.cluster.local:9000"
+                  BucketName = "gitlab-runner-cache"
+                  BucketLocation = "us-east-1"
+                  # in-cluster MinIO speaks plain HTTP
+                  Insecure = true
   destination:
     namespace: gitlab-runner
     server: https://kubernetes.default.svc
