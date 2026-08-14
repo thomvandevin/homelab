@@ -53,14 +53,6 @@ spec:
             # over IPv6 link-local, so it has to be pinned to the LAN interface
             - --primary-interface
             - enp1s0
-            # Matter devices are commissioned over BLE before they join Thread
-            - --bluetooth-adapter
-            - "0"
-          securityContext:
-            capabilities:
-              add:
-                - NET_ADMIN
-                - NET_RAW
           ports:
             - containerPort: 5580
               name: ws
@@ -77,15 +69,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-            # BlueZ is driven over the host's system D-Bus
-            - name: dbus
-              mountPath: /run/dbus
-              readOnly: true
       volumes:
-        - name: dbus
-          hostPath:
-            path: /run/dbus
-            type: Directory
         - name: data
           persistentVolumeClaim:
             claimName: matter-server-data

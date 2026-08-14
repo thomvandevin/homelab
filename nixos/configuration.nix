@@ -39,13 +39,6 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Matter devices are commissioned over BLE before they join Thread; the
-  # matter-server pod drives hci0 directly over the system D-Bus
-  hardware.bluetooth = {
-    enable = true;
-    powerOnBoot = true;
-  };
-
   networking.hostName = meta.hostname; # Define your hostname.
   # Pick only one of the below networking options.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
