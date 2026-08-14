@@ -26,6 +26,14 @@ spec:
             enabled: true
             additionalLabels:
               release: prometheus
+        persistence:
+          # Single-node cluster with replica-soft-anti-affinity off, so replicas 2 and 3
+          # can never be scheduled and every volume sits permanently degraded
+          defaultClassReplicaCount: 1
+        defaultSettings:
+          # Left at the chart default of 0, engines are never upgraded with the manager;
+          # volumes had drifted across four engine versions back to v1.9.0
+          concurrentAutomaticEngineUpgradePerNodeLimit: 1
   destination:
     namespace: longhorn-system
     server: https://kubernetes.default.svc
