@@ -41,22 +41,26 @@ spec:
       # websocket on the node, so Home Assistant (also hostNetwork) reaches it on localhost.
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      # Unlike the Python server this image runs unprivileged as 1000:1000, so the
+      # existing root-owned volume has to be handed over
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: matter-server
-          image: ghcr.io/home-assistant-libs/python-matter-server:8.1.0
+          image: ghcr.io/matter-js/matterjs-server:1.4.0
           imagePullPolicy: IfNotPresent
-          args:
-            - --storage-path
-            - /data
-            # Without this the SDK logs "Using 'None' as primary interface" and every
-            # mDNS advertisement fails with "No endpoint"; Thread devices are reached
-            # over IPv6 link-local, so it has to be pinned to the LAN interface
-            - --primary-interface
-            - enp1s0
           ports:
             - containerPort: 5580
               name: ws
           env:
+            - name: STORAGE_PATH
+              value: /data
+            # Thread devices are reached over IPv6 link-local; without a primary
+            # interface the SDK picks none and every mDNS advertisement fails
+            - name: PRIMARY_INTERFACE
+              value: enp1s0
             - name: TZ
               value: Europe/Amsterdam
           resources:
