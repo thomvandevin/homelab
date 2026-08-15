@@ -47,6 +47,17 @@ spec:
         hostNetwork: true
         securityContext:
           privileged: true
+        additionalVolumes:
+          # BlueZ is driven over the host system bus; without this the bluetooth
+          # integration fails with "DBus service not found"
+          - name: dbus
+            hostPath:
+              path: /run/dbus
+              type: Directory
+        additionalMounts:
+          - name: dbus
+            mountPath: /run/dbus
+            readOnly: true
   destination:
     namespace: home-assistant
     server: https://kubernetes.default.svc
