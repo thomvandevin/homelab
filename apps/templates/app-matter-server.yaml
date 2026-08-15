@@ -61,6 +61,11 @@ spec:
             # interface the SDK picks none and every mDNS advertisement fails
             - name: PRIMARY_INTERFACE
               value: enp1s0
+            # Exposes the /ble endpoint that Home Assistant's matter-ble-proxy drives, so
+            # commissioning uses HA's bluetooth (an ESPHome proxy near the lamps) instead
+            # of an adapter on this host. Mutually exclusive with BLUETOOTH_ADAPTER.
+            - name: BLE_PROXY
+              value: "true"
             - name: TZ
               value: Europe/Amsterdam
           resources:
