@@ -47,16 +47,6 @@ spec:
         hostNetwork: true
         securityContext:
           privileged: true
-        additionalVolumes:
-          - name: conbee-usb
-            hostPath:
-              path: /dev/ttyACM0
-              # Without this kubelet creates a placeholder directory when the dongle
-              # is unplugged, which shadows the real device node and breaks Zigbee
-              type: CharDevice
-        additionalMounts:
-          - name: conbee-usb
-            mountPath: /dev/ttyACM0
   destination:
     namespace: home-assistant
     server: https://kubernetes.default.svc
