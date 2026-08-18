@@ -53,6 +53,7 @@ data:
   smtp-password: {{ .Values.closet.smtp.password | b64enc | quote }}
   openrouter-api-key: {{ .Values.closet.openrouter.api_key | b64enc | quote }}
   ai-internal-token: {{ .Values.closet.ai.internal_token | b64enc | quote }}
+  apns-key: {{ .Values.closet.apns.key | default "" | b64enc | quote }}
   # blank until a key is set → closet-ai falls back to StubWebDetection (off)
   google-vision-api-key: {{ .Values.closet.google_vision.api_key | default "" | b64enc | quote }}
 ---
@@ -243,6 +244,18 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: ai-internal-token
+            # Spring relaxed binding maps CLOSET_PUSH_KEYID to closet.push.keyId. An
+            # underscore before ID would bind closet.push.key.id instead, leaving keyId
+            # blank, and PushConfig would silently fall back to logging rather than sending.
+            - name: CLOSET_PUSH_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: apns-key
+            - name: CLOSET_PUSH_KEYID
+              value: "KL9JSM6SGA"
+            - name: CLOSET_PUSH_TEAMID
+              value: "MX7UH2Z869"
           resources:
             requests:
               cpu: 100m
