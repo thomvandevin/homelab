@@ -1,4 +1,7 @@
 creation_rules:
+  # Personal key (../key.txt) first so secrets stay decryptable when a host is
+  # rebuilt; host keys below are derived from each machine's SSH host key and
+  # change on every reinstall.
   - age: >-
-      age17mjtsnk6tvgna9zxh32u0af9dgeenmwlyl4t7n8ytld02jeqv90szh5gpf
-
+      age13w8ryx3k4ak47n7cfmccyachptt5lr3v97ndfc87ms02x7yj4saqp3qhal,
+      age1l9072xnffr34m9hf5nzlls0fad004mkx7xckwt760r9gk5ayjg6sgs6mvj
