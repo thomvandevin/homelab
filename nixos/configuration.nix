@@ -199,7 +199,21 @@
     jq
     tailscale
     bat
+    smartmontools
+    # Longhorn formats every volume ext4, so recovering one from a replica image
+    # needs e2fsck; the image is always dirty when copied from a live volume
+    e2fsprogs
   ];
+
+  # The drive this machine replaced died without warning: SMART had been
+  # reporting "Wear_Leveling_Count 1/10 FAILING_NOW" and nothing was watching.
+  # Short test nightly at 02:00, long test Saturdays at 03:00.
+  services.smartd = {
+    enable = true;
+    autodetect = true;
+    notifications.wall.enable = true;
+    defaults.monitored = "-a -o on -S on -s (S/../.././02|L/../../6/03)";
+  };
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
