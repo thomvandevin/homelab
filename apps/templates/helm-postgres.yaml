@@ -33,7 +33,16 @@ spec:
             requests:
               cpu: 100m
               memory: 256Mi
+        image:
+          # Broadcom pulled the versioned tags from docker.io/bitnami in Aug 2025 and
+          # moved them to bitnamilegacy; only :latest remains under bitnami. The old
+          # node had the image cached, so this only surfaced on a rebuild.
+          repository: bitnamilegacy/postgresql
         global:
+          security:
+            # bitnamilegacy is not the repository the chart expects, so its image
+            # verification has to be waived explicitly
+            allowInsecureImages: true
           postgresql:
             auth:
               existingSecret: db-secret
