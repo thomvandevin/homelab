@@ -11,3 +11,6 @@ key.txt
 .github/self-hosted-runner/
 backup
 .claude
+
+# Pre-seeded host keys for nixos-anywhere
+nixos/extra-files

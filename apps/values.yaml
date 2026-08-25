@@ -1,0 +1,6 @@
+# Monitoring is off while the replacement SSD's write rate is unknown: the
+# previous drive wore out at ~530 GB/day. The prometheus-operator CRDs are
+# still installed, so the ServiceMonitors declared by longhorn, argocd and
+# postgres-exporter keep applying cleanly while the stack is disabled.
+prometheus:
+  enabled: false
