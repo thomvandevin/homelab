@@ -23,16 +23,19 @@ metadata:
   name: unifi-mongo-init
   namespace: unifi
 data:
+  # One user carrying a role per database, not a user per database: the
+  # controller authenticates once against its main database and reaches the
+  # others on that same connection, so per-database users are never used.
+  # The audit database is required from 9.x onward.
   init-mongo.js: |
     db.getSiblingDB("unifi").createUser({
       user: "unifi",
       pwd: process.env.MONGO_UNIFI_PASSWORD,
-      roles: [{ role: "dbOwner", db: "unifi" }]
-    });
-    db.getSiblingDB("unifi_stat").createUser({
-      user: "unifi",
-      pwd: process.env.MONGO_UNIFI_PASSWORD,
-      roles: [{ role: "dbOwner", db: "unifi_stat" }]
+      roles: [
+        { role: "dbOwner", db: "unifi" },
+        { role: "dbOwner", db: "unifi_stat" },
+        { role: "dbOwner", db: "unifi_audit" }
+      ]
     });
 ---
 apiVersion: v1
