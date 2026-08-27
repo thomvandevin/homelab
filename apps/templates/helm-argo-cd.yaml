@@ -23,6 +23,12 @@ spec:
         configs:
           params:
             server.insecure: true
+          secret:
+            # bcrypt hash, not the password. Generated once and stored rather than
+            # hashed at render time: sprig's htpasswd salts randomly, so the value
+            # would differ on every sync and argocd would rewrite the secret forever.
+            argocdServerAdminPassword: {{ .Values.argocd.password_bcrypt | quote }}
+            argocdServerAdminPasswordMtime: {{ .Values.argocd.password_mtime | quote }}
           cm:
             helm.valuesFileSchemes: >-
               secrets+gpg-import, secrets+gpg-import-kubernetes,
