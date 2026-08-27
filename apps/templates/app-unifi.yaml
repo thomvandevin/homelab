@@ -199,41 +199,8 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: unifi-config
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: unifi
-  namespace: unifi
-  annotations:
-    # the controller serves its own TLS on 8443 and redirects plain HTTP
-    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-spec:
-  ingressClassName: tailscale
-  rules:
-    - host: unifi
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: unifi
-                port:
-                  number: 8443
-  tls:
-    - hosts:
-        - unifi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: unifi
-  namespace: unifi
-spec:
-  selector:
-    app: unifi
-  ports:
-    - name: https
-      port: 8443
-      targetPort: 8443
+
+# No Service or Ingress: the controller runs on hostNetwork, so it is already
+# reachable on the node's LAN and tailnet addresses at port 8443. The tailscale
+# ingress proxy cannot serve it anyway, since it forwards plain HTTP and the
+# controller's port is HTTPS only.
