@@ -44,11 +44,20 @@ spec:
           volumeMounts:
             - name: dshm
               mountPath: /dev/shm
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: dshm
           emptyDir:
             medium: Memory
             sizeLimit: 1Gi
+        # Chromium creates and discards a profile directory per request. On the
+        # container's own filesystem that churn was the single largest source of
+        # disk writes on the node, for data that never needs to survive a restart.
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 512Mi
 ---
 apiVersion: v1
 kind: Service
