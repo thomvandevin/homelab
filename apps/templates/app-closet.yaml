@@ -51,7 +51,8 @@ data:
   minio-secret-key: {{ .Values.closet.minio.secret_key | b64enc | quote }}
   smtp-username: {{ .Values.closet.smtp.username | b64enc | quote }}
   smtp-password: {{ .Values.closet.smtp.password | b64enc | quote }}
-  openrouter-api-key: {{ .Values.closet.openrouter.api_key | b64enc | quote }}
+  openrouter-api-key-paid: {{ .Values.closet.openrouter.api_key_paid | b64enc | quote }}
+  openrouter-api-key-free: {{ .Values.closet.openrouter.api_key_free | b64enc | quote }}
   ai-internal-token: {{ .Values.closet.ai.internal_token | b64enc | quote }}
   apns-key: {{ .Values.closet.apns.key | default "" | b64enc | quote }}
   # blank until a key is set → closet-ai falls back to StubWebDetection (off)
@@ -382,11 +383,20 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: ai-internal-token
-            - name: OPENROUTER_API_KEY
+            - name: OPENROUTER_API_KEY_PAID
               valueFrom:
                 secretKeyRef:
                   name: app-secret
-                  key: openrouter-api-key
+                  key: openrouter-api-key-paid
+            - name: OPENROUTER_API_KEY_FREE
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: openrouter-api-key-free
+            # allow while we learn what the free providers make of garment photos; deny routes
+            # only to providers that keep nothing
+            - name: OPENROUTER_FREE_DATA_COLLECTION
+              value: allow
             # Half the price of gemini-3-pro-image and a quarter of the time, at
             # the cost of an occasional cropped leg. Renders are 97% of AI spend
             # and the daily job makes one per user each morning, so this line is
