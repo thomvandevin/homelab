@@ -404,7 +404,7 @@ spec:
             - name: OPENROUTER_IMAGE_MODEL
               value: google/gemini-3.1-flash-image
             - name: OPENROUTER_STYLIZE_MODEL
-              value: google/gemini-2.5-flash-image
+              value: google/gemini-3.1-flash-image
             # blank when the secret is empty → reverse image search stays off
             - name: GOOGLE_VISION_API_KEY
               valueFrom:
