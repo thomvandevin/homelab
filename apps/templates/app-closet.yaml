@@ -207,6 +207,8 @@ spec:
               value: https://closet.thomvandev.in
             - name: CLOSET_AUTH_PUBLICURL
               value: https://closet.thomvandev.in
+            - name: CLOSET_IOS_TESTFLIGHTURL
+              value: https://testflight.apple.com/join/cACnpeqY
             - name: SMTP_HOST
               value: smtp-relay.brevo.com
             - name: SMTP_PORT
