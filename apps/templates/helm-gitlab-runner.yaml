@@ -88,6 +88,8 @@ spec:
     helm:
       valuesObject:
         gitlabUrl: https://gitlab.com
+        # three privileged test jobs at once is what the node carries
+        concurrent: 3
         rbac:
           create: true
         runners:
@@ -105,6 +107,15 @@ spec:
                 # Testcontainers test jobs (all CI moved off gitlab.com
                 # shared runners to stay within compute minutes)
                 privileged = true
+                # cpu requests stay small: the node is nearly fully CPU-reserved
+                cpu_request = "250m"
+                memory_request = "1536Mi"
+                memory_limit = "6Gi"
+                service_cpu_request = "100m"
+                service_memory_request = "512Mi"
+                service_memory_limit = "3Gi"
+                helper_cpu_request = "50m"
+                helper_memory_request = "128Mi"
               [runners.cache]
                 Type = "s3"
                 Path = "gitlab-runner"
