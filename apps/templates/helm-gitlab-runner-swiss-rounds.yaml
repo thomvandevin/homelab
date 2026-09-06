@@ -46,6 +46,9 @@ spec:
     helm:
       valuesObject:
         gitlabUrl: https://gitlab.com
+        # shares the node with the closet runner; chart default of 10 is what
+        # allowed a dozen job pods at once
+        concurrent: 2
         rbac:
           create: true
         runners:
@@ -59,6 +62,14 @@ spec:
                 service_account = "gitlab-ci-job"
                 # unprivileged: swiss-rounds builds with Kaniko, not dind
                 privileged = false
+                cpu_request = "100m"
+                cpu_limit = "1000m"
+                memory_request = "512Mi"
+                # kaniko holds whole image layers in memory during a build
+                memory_limit = "3Gi"
+                helper_cpu_request = "50m"
+                helper_cpu_limit = "200m"
+                helper_memory_request = "128Mi"
   destination:
     namespace: gitlab-runner-swiss-rounds
     server: https://kubernetes.default.svc
