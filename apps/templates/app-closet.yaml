@@ -57,6 +57,7 @@ data:
   apns-key: {{ .Values.closet.apns.key | default "" | b64enc | quote }}
   # blank until a key is set → closet-ai falls back to StubWebDetection (off)
   google-vision-api-key: {{ .Values.closet.google_vision.api_key | default "" | b64enc | quote }}
+  beta-invite-code: {{ .Values.closet.auth.beta_invite_code | default "" | b64enc | quote }}
 ---
 apiVersion: v1
 kind: Secret
@@ -210,6 +211,12 @@ spec:
               value: https://closet.thomvandev.in
             - name: CLOSET_IOS_TESTFLIGHTURL
               value: https://testflight.apple.com/join/cACnpeqY
+            # blank when the secret is empty: no standing invite, only single-use ones
+            - name: CLOSET_AUTH_BETAINVITECODE
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: beta-invite-code
             - name: SMTP_HOST
               value: smtp-relay.brevo.com
             - name: SMTP_PORT
