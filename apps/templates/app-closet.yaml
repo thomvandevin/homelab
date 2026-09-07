@@ -217,6 +217,9 @@ spec:
                 secretKeyRef:
                   name: app-secret
                   key: beta-invite-code
+            # the tier a new account starts on, while the beta runs on the paid models
+            - name: CLOSET_AI_DEFAULTLANE
+              value: PAID
             - name: SMTP_HOST
               value: smtp-relay.brevo.com
             - name: SMTP_PORT
