@@ -404,9 +404,6 @@ spec:
                   name: app-secret
                   key: openrouter-api-key-free
             # allow while we learn what the free providers make of garment photos; deny routes
-            # only to providers that keep nothing
-            - name: OPENROUTER_FREE_DATA_COLLECTION
-              value: allow
             # Half the price of gemini-3-pro-image and a quarter of the time, at
             # the cost of an occasional cropped leg. Renders are 97% of AI spend
             # and the daily job makes one per user each morning, so this line is
