@@ -37,7 +37,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: mc
-          image: minio/mc:latest
+          image: quay.io/minio/mc:latest
           command: ["sh", "-c"]
           args:
             - |
