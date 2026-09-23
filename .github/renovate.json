@@ -44,6 +44,17 @@
         "major"
       ],
       "enabled": false
+    },
+    {
+      "description": "UniFi controller minors can carry a MongoDB schema migration - keep them manual",
+      "matchPackageNames": [
+        "lscr.io/linuxserver/unifi-network-application"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "automerge": false
     }
   ],
   "argocd": {
@@ -64,15 +75,17 @@
   },
   "customManagers": [
     {
+      "description": "Tool versions baked into the argocd repo-server init container",
       "customType": "regex",
-      "datasourceTemplate": "docker",
+      "datasourceTemplate": "{{{datasource}}}",
+      "depNameTemplate": "{{{depName}}}",
+      "extractVersionTemplate": "^v?(?<version>.+)$",
       "managerFilePatterns": [
-        "/apps/templates/helm-factorio.yaml$/"
+        "/apps/templates/helm-argo-cd.yaml$/"
       ],
       "matchStrings": [
-        "#\\s?renovate: image=(?<depName>.*?)\\s+?tag:\\s?\\\"?(?<currentValue>[\\w+\\.\\-]*)(@(?<currentDigest>sha256:[0-9a-f]*))?\\\"?"
-      ],
-      "versioningTemplate": "loose"
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s*\\n\\s*- name: \\S+\\s*\\n\\s*value: \"(?<currentValue>[^\"]+)\""
+      ]
     }
   ]
 }

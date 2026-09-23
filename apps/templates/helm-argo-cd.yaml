@@ -93,12 +93,16 @@ spec:
                 # 4.7.x is required: argocd v3.5.0 ships Helm v4, which refuses
                 # to load the Helm 3 era plugin.yaml that 4.6.10 provides, so
                 # every `secrets://` values file fails to render.
+                # renovate: datasource=github-releases depName=jkroepke/helm-secrets
                 - name: HELM_SECRETS_VERSION
                   value: "4.7.7"
+                # renovate: datasource=github-releases depName=kubernetes/kubernetes
                 - name: KUBECTL_VERSION
                   value: "1.30.2"
+                # renovate: datasource=github-releases depName=helmfile/vals
                 - name: VALS_VERSION
                   value: "0.37.3"
+                # renovate: datasource=github-releases depName=getsops/sops
                 - name: SOPS_VERSION
                   value: "3.9.0"
               args:
