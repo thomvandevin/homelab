@@ -408,10 +408,6 @@ spec:
             # the cost of an occasional cropped leg. Renders are 97% of AI spend
             # and the daily job makes one per user each morning, so this line is
             # what the bill scales on.
-            - name: OPENROUTER_IMAGE_MODEL
-              value: meta/muse-image
-            - name: OPENROUTER_STYLIZE_MODEL
-              value: meta/muse-image
             # blank when the secret is empty → reverse image search stays off
             - name: GOOGLE_VISION_API_KEY
               valueFrom:
