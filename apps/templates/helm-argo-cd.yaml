@@ -98,7 +98,7 @@ spec:
                   value: "4.7.7"
                 # renovate: datasource=github-releases depName=kubernetes/kubernetes
                 - name: KUBECTL_VERSION
-                  value: "1.30.2"
+                  value: "1.37.0"
                 # renovate: datasource=github-releases depName=helmfile/vals
                 - name: VALS_VERSION
                   value: "0.37.3"
