@@ -29,9 +29,12 @@ metadata:
     # The runner never creates the bucket itself, and a plain Job would be immutable
     # across syncs, so run it as a self-deleting hook
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,HookFailed
 spec:
   backoffLimit: 3
+  # A hook that never terminates leaves the whole app-of-apps sync Running
+  # indefinitely; a bad image pull must fail the hook, not hang it
+  activeDeadlineSeconds: 300
   template:
     spec:
       restartPolicy: OnFailure
