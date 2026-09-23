@@ -409,9 +409,9 @@ spec:
             # and the daily job makes one per user each morning, so this line is
             # what the bill scales on.
             - name: OPENROUTER_IMAGE_MODEL
-              value: google/gemini-3.1-flash-image
+              value: meta/muse-image
             - name: OPENROUTER_STYLIZE_MODEL
-              value: google/gemini-3.1-flash-image
+              value: meta/muse-image
             # blank when the secret is empty → reverse image search stays off
             - name: GOOGLE_VISION_API_KEY
               valueFrom:
