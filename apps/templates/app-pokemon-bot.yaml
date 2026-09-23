@@ -306,6 +306,11 @@ spec:
               value: guest
             - name: FLARESOLVERR_URL
               value: http://flaresolverr.flaresolverr.svc.cluster.local:8191
+            - name: BOT_AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secret
+                  key: jwt-secret
           resources:
             requests:
               cpu: 200m
@@ -368,6 +373,11 @@ spec:
               value: guest
             - name: SPRING_RABBITMQ_PASSWORD
               value: guest
+            - name: BOT_AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secret
+                  key: jwt-secret
           resources:
             requests:
               cpu: 200m
@@ -430,6 +440,11 @@ spec:
               value: guest
             - name: SPRING_RABBITMQ_PASSWORD
               value: guest
+            - name: BOT_AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secret
+                  key: jwt-secret
           resources:
             requests:
               cpu: 200m
@@ -450,202 +465,7 @@ spec:
     - port: 8083
       targetPort: 8083
 ---
-# -- Scraper frontend ----------------------------------------------------------
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: scraper-frontend
-  namespace: pokemon-bot
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: scraper-frontend
-  template:
-    metadata:
-      labels:
-        app: scraper-frontend
-    spec:
-      imagePullSecrets:
-        - name: gitlab-registry-secret
-      containers:
-        - name: scraper-frontend
-          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/scraper-frontend:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 80
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: scraper-frontend
-  namespace: pokemon-bot
-spec:
-  selector:
-    app: scraper-frontend
-  ports:
-    - port: 80
-      targetPort: 80
----
-# -- Notifications frontend ----------------------------------------------------
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: notifications-frontend
-  namespace: pokemon-bot
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: notifications-frontend
-  template:
-    metadata:
-      labels:
-        app: notifications-frontend
-    spec:
-      imagePullSecrets:
-        - name: gitlab-registry-secret
-      containers:
-        - name: notifications-frontend
-          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/notifications-frontend:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 80
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: notifications-frontend
-  namespace: pokemon-bot
-spec:
-  selector:
-    app: notifications-frontend
-  ports:
-    - port: 80
-      targetPort: 80
----
-# -- Checkout frontend ---------------------------------------------------------
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: checkout-frontend
-  namespace: pokemon-bot
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: checkout-frontend
-  template:
-    metadata:
-      labels:
-        app: checkout-frontend
-    spec:
-      imagePullSecrets:
-        - name: gitlab-registry-secret
-      containers:
-        - name: checkout-frontend
-          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/checkout-frontend:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 80
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: checkout-frontend
-  namespace: pokemon-bot
-spec:
-  selector:
-    app: checkout-frontend
-  ports:
-    - port: 80
-      targetPort: 80
----
 # -- Tailscale Ingress (internal only) ----------------------------------------
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: pokemon-scraper
-  namespace: pokemon-bot
-spec:
-  ingressClassName: tailscale
-  rules:
-    - http:
-        paths:
-          - backend:
-              service:
-                name: scraper-frontend
-                port:
-                  number: 80
-            path: "/"
-            pathType: Prefix
-  tls:
-    - hosts:
-        - pokemon-scraper
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: pokemon-notifications
-  namespace: pokemon-bot
-spec:
-  ingressClassName: tailscale
-  rules:
-    - http:
-        paths:
-          - backend:
-              service:
-                name: notifications-frontend
-                port:
-                  number: 80
-            path: "/"
-            pathType: Prefix
-  tls:
-    - hosts:
-        - pokemon-notifications
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: pokemon-checkout
-  namespace: pokemon-bot
-spec:
-  ingressClassName: tailscale
-  rules:
-    - http:
-        paths:
-          - backend:
-              service:
-                name: checkout-frontend
-                port:
-                  number: 80
-            path: "/"
-            pathType: Prefix
-  tls:
-    - hosts:
-        - pokemon-checkout
----
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
