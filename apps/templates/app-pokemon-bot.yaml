@@ -307,6 +307,8 @@ spec:
               value: guest
             - name: FLARESOLVERR_URL
               value: http://flaresolverr.flaresolverr.svc.cluster.local:8191
+            - name: FINGERPRINT_FETCHER_URL
+              value: http://fingerprint-fetcher.pokemon-bot.svc.cluster.local:8090
             - name: BOT_AUTH_JWT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -331,6 +333,71 @@ spec:
   ports:
     - port: 8081
       targetPort: 8081
+---
+# -- Fingerprint fetcher ------------------------------------------------------
+# Fetches bot-protected shops for the scraper with Chrome's TLS fingerprint
+# (pokemon-bot fetcher/). It only fetches the hosts in ALLOWED_HOSTS.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fingerprint-fetcher
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fingerprint-fetcher
+  template:
+    metadata:
+      labels:
+        app: fingerprint-fetcher
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: fingerprint-fetcher
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/fingerprint-fetcher:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8090
+          env:
+            - name: ALLOWED_HOSTS
+              value: pocketgames.nl,catchyourcards.nl,flash-cards.be,tcgkingdom.nl,top1toys.nl
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fingerprint-fetcher
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: fingerprint-fetcher
+  ports:
+    - port: 8090
+      targetPort: 8090
 ---
 # -- Notifications backend -----------------------------------------------------
 apiVersion: apps/v1
