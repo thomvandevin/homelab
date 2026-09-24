@@ -39,13 +39,16 @@ spec:
     spec:
       restartPolicy: OnFailure
       containers:
-        - name: mc
-          image: quay.io/minio/mc:latest
+        # The minio/mc image is not publicly pullable; the AWS CLI speaks S3 to MinIO just as well.
+        - name: aws
+          image: amazon/aws-cli:2.37.2
           command: ["sh", "-c"]
           args:
             - |
-              mc alias set minio http://minio-svc.closet.svc.cluster.local:9000 "$ACCESS_KEY" "$SECRET_KEY"
-              mc mb --ignore-existing minio/gitlab-runner-cache
+              export AWS_ACCESS_KEY_ID="$ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$SECRET_KEY" AWS_DEFAULT_REGION=us-east-1
+              endpoint=http://minio-svc.closet.svc.cluster.local:9000
+              aws --endpoint-url "$endpoint" s3api head-bucket --bucket gitlab-runner-cache \
+                || aws --endpoint-url "$endpoint" s3 mb s3://gitlab-runner-cache
           env:
             - name: ACCESS_KEY
               valueFrom:
