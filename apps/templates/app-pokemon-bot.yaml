@@ -162,6 +162,7 @@ metadata:
 data:
   password: {{ .Values.pokemon_bot.dashboard_password | b64enc | quote }}
   jwt-secret: {{ .Values.pokemon_bot.dashboard_jwt_secret | b64enc | quote }}
+  push-vapid-private-key: {{ .Values.pokemon_bot.push_vapid_private_key | default "" | b64enc | quote }}
 ---
 # -- Dashboard backend --------------------------------------------------------
 apiVersion: apps/v1
@@ -198,6 +199,15 @@ spec:
                 secretKeyRef:
                   name: dashboard-secret
                   key: jwt-secret
+            - name: BOT_PUSH_VAPID_PUBLIC_KEY
+              value: BB7Jt-O9p6F5F6edqA2gM3DmO1cyEN81vJ69VK-dlQCfvmKVja5NNptF4HSJKIKIrKCRlglhz88SGnv_a8D8BNc
+            - name: BOT_PUSH_VAPID_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secret
+                  key: push-vapid-private-key
+            - name: BOT_PUSH_VAPID_SUBJECT
+              value: https://github.com/thomvandevin/homelab
           resources:
             requests:
               cpu: 100m
