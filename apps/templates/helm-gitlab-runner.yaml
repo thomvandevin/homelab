@@ -41,7 +41,7 @@ spec:
       containers:
         # The minio/mc image is not publicly pullable; the AWS CLI speaks S3 to MinIO just as well.
         - name: aws
-          image: amazon/aws-cli:2.37.2
+          image: amazon/aws-cli:2.37.3@sha256:83f8ffe939569070c5b66d22231862ab78718766d9d8e4c44ca84dd0be5569a5
           command: ["sh", "-c"]
           args:
             - |
