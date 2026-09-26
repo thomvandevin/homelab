@@ -54,6 +54,9 @@ spec:
             # Pokemon Bot Dashboard
             - hostname: pokemon-bot.thomvandev.in
               service: http://dashboard-frontend.pokemon-bot.svc.cluster.local:80
+            # Pokemon projects index
+            - hostname: pokemon.thomvandev.in
+              service: http://pokemon-index-svc.pokemon-index.svc.cluster.local:80
             # Pokemon Monitor (public portal)
             - hostname: pokemon-monitor.thomvandev.in
               service: http://portal-frontend.pokemon-bot.svc.cluster.local:80
