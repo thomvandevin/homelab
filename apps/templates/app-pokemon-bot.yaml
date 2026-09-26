@@ -279,6 +279,15 @@ spec:
               value: http://scraper-backend.pokemon-bot.svc.cluster.local:8081
             - name: NOTIFICATIONS_URL
               value: http://notifications-backend.pokemon-bot.svc.cluster.local:8082
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgresql.db-system.svc.cluster.local:5432/pokemon_portal
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
             - name: PORTAL_JWT_SECRET
               valueFrom:
                 secretKeyRef:
