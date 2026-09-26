@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pokemon-index
+  labels:
+    name: pokemon-index
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pokemon-index-deployer
+  namespace: pokemon-index
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-pokemon-index-deploy
+  namespace: pokemon-index
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: pokemon-index-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: pokemon-index
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
+---
+# -- The index: a static site, built in CI and served by nginx ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pokemon-index
+  namespace: pokemon-index
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pokemon-index
+  template:
+    metadata:
+      labels:
+        app: pokemon-index
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: pokemon-index
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-index:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pokemon-index-svc
+  namespace: pokemon-index
+spec:
+  selector:
+    app: pokemon-index
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
