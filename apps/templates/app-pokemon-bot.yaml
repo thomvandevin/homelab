@@ -241,6 +241,16 @@ spec:
       targetPort: 8080
 ---
 # -- Dashboard frontend -------------------------------------------------------
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: portal-secret
+  namespace: pokemon-bot
+data:
+  discord-client-id: {{ .Values.pokemon_bot.portal_discord_client_id | b64enc | quote }}
+  discord-client-secret: {{ .Values.pokemon_bot.portal_discord_client_secret | b64enc | quote }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -274,6 +284,18 @@ spec:
                 secretKeyRef:
                   name: dashboard-secret
                   key: jwt-secret
+            - name: PORTAL_DISCORD_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: portal-secret
+                  key: discord-client-id
+            - name: PORTAL_DISCORD_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: portal-secret
+                  key: discord-client-secret
+            - name: PORTAL_PUBLIC_URL
+              value: https://pokemon-monitor.thomvandev.in
           startupProbe:
             httpGet:
               path: /actuator/health/liveness
