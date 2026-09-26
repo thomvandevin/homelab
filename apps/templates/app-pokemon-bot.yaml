@@ -305,6 +305,14 @@ spec:
                   key: discord-client-secret
             - name: PORTAL_PUBLIC_URL
               value: https://pokemon-monitor.thomvandev.in
+            # The portal signs browser push with the same VAPID pair as the dashboard.
+            - name: PORTAL_PUSH_VAPID_PUBLIC_KEY
+              value: BB7Jt-O9p6F5F6edqA2gM3DmO1cyEN81vJ69VK-dlQCfvmKVja5NNptF4HSJKIKIrKCRlglhz88SGnv_a8D8BNc
+            - name: PORTAL_PUSH_VAPID_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secret
+                  key: push-vapid-private-key
           startupProbe:
             httpGet:
               path: /actuator/health/liveness
