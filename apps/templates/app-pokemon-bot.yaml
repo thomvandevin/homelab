@@ -244,6 +244,123 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: portal-backend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portal-backend
+  template:
+    metadata:
+      labels:
+        app: portal-backend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: portal-backend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/portal-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8084
+          env:
+            - name: SCRAPER_URL
+              value: http://scraper-backend.pokemon-bot.svc.cluster.local:8081
+            - name: NOTIFICATIONS_URL
+              value: http://notifications-backend.pokemon-bot.svc.cluster.local:8082
+            - name: PORTAL_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secret
+                  key: jwt-secret
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8084
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8084
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8084
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal-backend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: portal-backend
+  ports:
+    - port: 8084
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal-frontend
+  namespace: pokemon-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portal-frontend
+  template:
+    metadata:
+      labels:
+        app: portal-frontend
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      containers:
+        - name: portal-frontend
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-bot/portal-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal-frontend
+  namespace: pokemon-bot
+spec:
+  selector:
+    app: portal-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: dashboard-frontend
   namespace: pokemon-bot
 spec:
