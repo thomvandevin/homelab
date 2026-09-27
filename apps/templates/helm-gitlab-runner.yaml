@@ -75,6 +75,26 @@ metadata:
   namespace: gitlab-runner
 automountServiceAccountToken: true
 ---
+# Maven global settings mounted into every job; they send requests for Maven Central
+# to the in-cluster proxy (app-maven-proxy.yaml). Other repositories a project
+# declares are left alone.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: maven-proxy-settings
+  namespace: gitlab-runner
+data:
+  settings.xml: |
+    <settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
+      <mirrors>
+        <mirror>
+          <id>homelab-maven-proxy</id>
+          <mirrorOf>central</mirrorOf>
+          <url>http://maven-proxy.maven-proxy.svc.cluster.local:8080/central</url>
+        </mirror>
+      </mirrors>
+    </settings>
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -105,6 +125,8 @@ spec:
             secretName: gitlab-runner-cache-secret
           config: |
             [[runners]]
+              # Maven 3.9+ reads MAVEN_ARGS on every invocation, so each project picks up the proxy without CI changes
+              environment = ["MAVEN_ARGS=--global-settings=/etc/maven-proxy/settings.xml"]
               [runners.kubernetes]
                 namespace = "gitlab-runner"
                 image = "ubuntu:22.04"
@@ -129,6 +151,9 @@ spec:
                 helper_memory_request = "128Mi"
                 # a job pod may wait for room rather than fail the job after three minutes
                 poll_timeout = 600
+                [[runners.kubernetes.volumes.config_map]]
+                  name = "maven-proxy-settings"
+                  mount_path = "/etc/maven-proxy"
               [runners.cache]
                 Type = "s3"
                 Path = "gitlab-runner"
