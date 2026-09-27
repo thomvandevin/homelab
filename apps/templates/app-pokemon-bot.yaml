@@ -570,7 +570,7 @@ spec:
             - containerPort: 8090
           env:
             - name: ALLOWED_HOSTS
-              value: pocketgames.nl,catchyourcards.nl,flash-cards.be,tcgkingdom.nl,top1toys.nl
+              value: pocketgames.nl,catchyourcards.nl,flash-cards.be,tcgkingdom.nl,top1toys.nl,kruidvat.nl
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
