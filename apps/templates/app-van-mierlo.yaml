@@ -102,7 +102,9 @@ spec:
     spec:
       containers:
         - name: minio
+          # MinIO withdrew its public images; the node's cached copy (RELEASE.2025-09-07T16-13-09Z) is the only one
           image: quay.io/minio/minio:latest
+          imagePullPolicy: IfNotPresent
           command:
             - minio
             - server
