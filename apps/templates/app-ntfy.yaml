@@ -42,6 +42,9 @@ spec:
     metadata:
       labels:
         app: ntfy
+      annotations:
+        # Env from a secret is only read at start, so a changed user or token must roll the pod.
+        checksum/ntfy-secret: {{ $ntfy | toJson | sha256sum | quote }}
     spec:
       containers:
         - name: ntfy
