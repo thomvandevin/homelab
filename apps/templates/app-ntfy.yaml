@@ -1,0 +1,130 @@
+# Self-hosted ntfy (https://ntfy.sh) for alerts from the Pokémon Monitor portal and the pokemon-bot admin
+# notifications. Anonymous visitors may only subscribe: a topic is a random secret handed to its owner, and only
+# the portal and bot users (tokens in secrets.yaml under ntfy) may publish. Until those secrets exist nobody can
+# publish, so the server is harmless on its own.
+#
+# iPhones cannot keep a connection open, so every message also sends a poll request to ntfy.sh, which wakes the
+# app through Apple's push service. ntfy.sh only sees a hash of the topic, never the message.
+{{- $ntfy := .Values.ntfy | default dict }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ntfy
+  labels:
+    name: ntfy
+---
+{{- if $ntfy.auth_users }}
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: ntfy-secret
+  namespace: ntfy
+data:
+  auth-users: {{ $ntfy.auth_users | b64enc | quote }}
+  auth-access: {{ "portal:*:wo,bot:*:wo" | b64enc | quote }}
+  auth-tokens: {{ printf "portal:%s:portal,bot:%s:bot" ($ntfy.portal_token | default "") ($ntfy.bot_token | default "") | b64enc | quote }}
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy
+  namespace: ntfy
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ntfy
+  template:
+    metadata:
+      labels:
+        app: ntfy
+    spec:
+      containers:
+        - name: ntfy
+          image: binwiederhier/ntfy:v2.28.0@sha256:6ef4b819f722fccdc036af611c4774cfdc2de821ab74fdd48bbf4c9d6f8973da
+          imagePullPolicy: IfNotPresent
+          args: ["serve"]
+          ports:
+            - containerPort: 80
+          env:
+            - name: NTFY_BASE_URL
+              value: https://ntfy.thomvandev.in
+            - name: NTFY_LISTEN_HTTP
+              value: ":80"
+            - name: NTFY_BEHIND_PROXY
+              value: "true"
+            - name: NTFY_UPSTREAM_BASE_URL
+              value: https://ntfy.sh
+            # Messages and users live on scratch space: users are declared below and recreated on every start,
+            # and a lost message cache only means an app that was offline for hours misses an old alert.
+            - name: NTFY_CACHE_FILE
+              value: /var/cache/ntfy/cache.db
+            - name: NTFY_AUTH_FILE
+              value: /var/lib/ntfy/user.db
+            - name: NTFY_AUTH_DEFAULT_ACCESS
+              value: read-only
+            # The portal and bot publish from inside the cluster; a burst of alerts must not hit the visitor rate limit.
+            - name: NTFY_VISITOR_REQUEST_LIMIT_EXEMPT_HOSTS
+              value: 10.42.0.0/16
+            - name: NTFY_AUTH_USERS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-secret
+                  key: auth-users
+                  optional: true
+            - name: NTFY_AUTH_ACCESS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-secret
+                  key: auth-access
+                  optional: true
+            - name: NTFY_AUTH_TOKENS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-secret
+                  key: auth-tokens
+                  optional: true
+          volumeMounts:
+            - name: cache
+              mountPath: /var/cache/ntfy
+            - name: auth
+              mountPath: /var/lib/ntfy
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: 80
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: cache
+          emptyDir: {}
+        - name: auth
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ntfy
+  namespace: ntfy
+spec:
+  selector:
+    app: ntfy
+  ports:
+    - port: 80
+      targetPort: 80

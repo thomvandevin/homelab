@@ -250,6 +250,11 @@ metadata:
 data:
   discord-client-id: {{ .Values.pokemon_bot.portal_discord_client_id | b64enc | quote }}
   discord-client-secret: {{ .Values.pokemon_bot.portal_discord_client_secret | b64enc | quote }}
+  # Optional: each channel stays off in the portal until its value exists in secrets.yaml.
+  discord-bot-token: {{ .Values.pokemon_bot.portal_discord_bot_token | default "" | b64enc | quote }}
+  discord-guild-id: {{ .Values.pokemon_bot.portal_discord_guild_id | default "" | b64enc | quote }}
+  telegram-bot-token: {{ .Values.pokemon_bot.portal_telegram_bot_token | default "" | b64enc | quote }}
+  ntfy-token: {{ (.Values.ntfy | default dict).portal_token | default "" | b64enc | quote }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -313,6 +318,31 @@ spec:
                   key: discord-client-secret
             - name: PORTAL_PUBLIC_URL
               value: https://pokemon-monitor.thomvandev.in
+            - name: PORTAL_DISCORD_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: portal-secret
+                  key: discord-bot-token
+            - name: PORTAL_DISCORD_GUILD_ID
+              valueFrom:
+                secretKeyRef:
+                  name: portal-secret
+                  key: discord-guild-id
+            - name: PORTAL_TELEGRAM_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: portal-secret
+                  key: telegram-bot-token
+            # The portal publishes inside the cluster and shows friends the public address to subscribe at.
+            - name: PORTAL_NTFY_URL
+              value: http://ntfy.ntfy.svc.cluster.local
+            - name: PORTAL_NTFY_PUBLIC_URL
+              value: https://ntfy.thomvandev.in
+            - name: PORTAL_NTFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: portal-secret
+                  key: ntfy-token
             # The portal signs browser push with the same VAPID pair as the dashboard.
             - name: PORTAL_PUSH_VAPID_PUBLIC_KEY
               value: BB7Jt-O9p6F5F6edqA2gM3DmO1cyEN81vJ69VK-dlQCfvmKVja5NNptF4HSJKIKIrKCRlglhz88SGnv_a8D8BNc
