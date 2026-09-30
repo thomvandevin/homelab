@@ -163,7 +163,6 @@ data:
   password: {{ .Values.pokemon_bot.dashboard_password | b64enc | quote }}
   jwt-secret: {{ .Values.pokemon_bot.dashboard_jwt_secret | b64enc | quote }}
   push-vapid-private-key: {{ .Values.pokemon_bot.push_vapid_private_key | default "" | b64enc | quote }}
-  ntfy-bot-token: {{ (.Values.ntfy | default dict).bot_token | default "" | b64enc | quote }}
 ---
 # -- Dashboard backend --------------------------------------------------------
 apiVersion: apps/v1
@@ -253,7 +252,6 @@ data:
   discord-client-secret: {{ .Values.pokemon_bot.portal_discord_client_secret | b64enc | quote }}
   # Optional: each channel stays off in the portal until its value exists in secrets.yaml.
   telegram-bot-token: {{ .Values.pokemon_bot.portal_telegram_bot_token | default "" | b64enc | quote }}
-  ntfy-token: {{ (.Values.ntfy | default dict).portal_token | default "" | b64enc | quote }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -322,16 +320,6 @@ spec:
                 secretKeyRef:
                   name: portal-secret
                   key: telegram-bot-token
-            # The portal publishes inside the cluster and shows friends the public address to subscribe at.
-            - name: PORTAL_NTFY_URL
-              value: http://ntfy.ntfy.svc.cluster.local
-            - name: PORTAL_NTFY_PUBLIC_URL
-              value: https://ntfy.thomvandev.in
-            - name: PORTAL_NTFY_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: portal-secret
-                  key: ntfy-token
             # The portal signs browser push with the same VAPID pair as the dashboard.
             - name: PORTAL_PUSH_VAPID_PUBLIC_KEY
               value: BB7Jt-O9p6F5F6edqA2gM3DmO1cyEN81vJ69VK-dlQCfvmKVja5NNptF4HSJKIKIrKCRlglhz88SGnv_a8D8BNc
@@ -680,12 +668,6 @@ spec:
                   key: push-vapid-private-key
             - name: BOT_PUSH_VAPID_SUBJECT
               value: https://github.com/thomvandevin/homelab
-            # ntfy channels publish as the bot user; anonymous publishing is refused on the server.
-            - name: NOTIFICATIONS_NTFY_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: dashboard-secret
-                  key: ntfy-bot-token
           startupProbe:
             httpGet:
               path: /actuator/health/liveness
