@@ -155,7 +155,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: unifi
-          image: lscr.io/linuxserver/unifi-network-application:10.5.67-ls142
+          image: lscr.io/linuxserver/unifi-network-application:10.5.67-ls142@sha256:7479a6b515ea1ab0465a475952ced0c69b272fa9efdc6a4d21cef12a0df3cf12
           env:
             - name: PUID
               value: "1000"
