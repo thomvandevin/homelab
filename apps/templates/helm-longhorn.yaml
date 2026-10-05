@@ -27,9 +27,9 @@ spec:
             additionalLabels:
               release: prometheus
         persistence:
-          # Single-node cluster with replica-soft-anti-affinity off, so replicas 2 and 3
-          # can never be scheduled and every volume sits permanently degraded
-          defaultClassReplicaCount: 1
+          # Three nodes with replica-soft-anti-affinity off: two replicas fit the
+          # 256 GB worker disks, three would not
+          defaultClassReplicaCount: 2
         preUpgradeChecker:
           # Longhorn's chart recommends disabling this under GitOps: the job runs as a
           # PreSync hook but needs longhorn-service-account, which the same sync creates,
@@ -39,6 +39,8 @@ spec:
           # Left at the chart default of 0, engines are never upgraded with the manager;
           # volumes had drifted across four engine versions back to v1.9.0
           concurrentAutomaticEngineUpgradePerNodeLimit: 1
+          # a pod whose node died is rescheduled instead of staying Terminating
+          nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
   destination:
     namespace: longhorn-system
     server: https://kubernetes.default.svc
