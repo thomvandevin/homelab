@@ -139,7 +139,9 @@
     (lib.mkIf (meta.role == "agent") {
       serverAddr = "https://192.168.178.151:6443";
       tokenFile = config.sops.secrets.k3s-token.path;
-      nodeLabel = [ "node-role.kubernetes.io/worker=true" ];
+      # the kubelet may not self-assign node-role.kubernetes.io labels, so
+      # workloads select on this one instead
+      nodeLabel = [ "thomvandev.in/role=worker" ];
       # drain this node's pods on reboot or poweroff instead of letting them
       # time out on the control plane
       gracefulNodeShutdown.enable = true;

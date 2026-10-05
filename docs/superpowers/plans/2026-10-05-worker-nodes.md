@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - `homelab-0` keeps `role = "server"`, `clusterInit = true`, and the flags `--write-kubeconfig-mode "0644" --disable servicelb --disable traefik --disable local-storage`.
-- Agents: `serverAddr = "https://192.168.178.151:6443"`, `tokenFile = config.sops.secrets.k3s-token.path`, label `node-role.kubernetes.io/worker=true`.
+- Agents: `serverAddr = "https://192.168.178.151:6443"`, `tokenFile = config.sops.secrets.k3s-token.path`, label `thomvandev.in/role=worker`.
 - Worker disk is `/dev/nvme0n1`; the installer's `lsblk` must confirm this before `nixos-anywhere` runs.
 - IPs `.152` / `.153` come from router DHCP reservations, not NixOS.
 - PRs are public: terse changelogs, no IPs, MACs, hostnames of other devices, serials, or secrets in PR text.
@@ -208,7 +208,7 @@ git add nixos/README.md && git commit -q -m "docs(nixos): point at the node tabl
 
 **Interfaces:**
 - Consumes: `meta.role` from Task 1.
-- Produces: agents labelled `node-role.kubernetes.io/worker=true`; `/var/lib/longhorn` with the `C` attribute on every node.
+- Produces: agents labelled `thomvandev.in/role=worker`; `/var/lib/longhorn` with the `C` attribute on every node.
 
 - [ ] **Step 1: Replace the k3s block**
 
@@ -232,7 +232,7 @@ Replace the existing `services.k3s = { ... };` (the block containing `role = "se
     (lib.mkIf (meta.role == "agent") {
       serverAddr = "https://192.168.178.151:6443";
       tokenFile = config.sops.secrets.k3s-token.path;
-      nodeLabel = [ "node-role.kubernetes.io/worker=true" ];
+      nodeLabel = [ "thomvandev.in/role=worker" ];
       # drain this node's pods on reboot or poweroff instead of letting them
       # time out on the control plane
       gracefulNodeShutdown.enable = true;
@@ -285,7 +285,7 @@ for h in homelab-0 homelab-1; do
 done
 ```
 Expected for `homelab-0`: one `--cluster-init`, the four server flags, no `--server`, no `--token-file`.
-Expected for `homelab-1`: `k3s agent`, `--server https://192.168.178.151:6443`, `--token-file /run/secrets/k3s-token`, `--node-label node-role.kubernetes.io/worker=true`, and none of the server flags.
+Expected for `homelab-1`: `k3s agent`, `--server https://192.168.178.151:6443`, `--token-file /run/secrets/k3s-token`, `--node-label thomvandev.in/role=worker`, and none of the server flags.
 
 Also:
 ```bash
@@ -511,7 +511,7 @@ for doc in yaml.safe_load_all(out):
            .get("preferredDuringSchedulingIgnoredDuringExecution") or [])
     seen.add(name)
     if name in PIN and sel != {"kubernetes.io/hostname": "homelab-0"}: bad.append((name, "expected pin"))
-    elif name in WORKERS_ONLY and sel != {"node-role.kubernetes.io/worker": "true"}: bad.append((name, "expected workersOnly"))
+    elif name in WORKERS_ONLY and sel != {"thomvandev.in/role": "worker"}: bad.append((name, "expected workersOnly"))
     elif name in PREFER and not aff: bad.append((name, "expected preferWorkers"))
     elif name not in PIN | WORKERS_ONLY | PREFER and (sel or aff): bad.append((name, "unexpected placement"))
 missing = (PIN | WORKERS_ONLY | PREFER) - seen
@@ -538,7 +538,7 @@ Expected: exit 1, one `BAD ... expected ...` line per workload in the three sets
 {{/*
 Pod-spec fragments for node placement. homelab-0 is the control plane and the
 only host with the Zigbee/Bluetooth hardware, the UniFi inform address and the
-registry hostPath; workers carry node-role.kubernetes.io/worker=true.
+registry hostPath; workers carry thomvandev.in/role=worker.
 */}}
 
 {{- define "placement.homelab0" -}}
@@ -548,7 +548,7 @@ nodeSelector:
 
 {{- define "placement.workersOnly" -}}
 nodeSelector:
-  node-role.kubernetes.io/worker: "true"
+  thomvandev.in/role: worker
 {{- end -}}
 
 {{- define "placement.preferWorkers" -}}
@@ -558,9 +558,9 @@ affinity:
       - weight: 100
         preference:
           matchExpressions:
-            - key: node-role.kubernetes.io/worker
+            - key: thomvandev.in/role
               operator: In
-              values: ["true"]
+              values: ["worker"]
 {{- end -}}
 ```
 
@@ -598,7 +598,7 @@ In `helm-gitlab-runner.yaml`, inside `[runners.kubernetes]` after `poll_timeout 
                 # CI jobs never run on the control plane; a job waits for a worker
                 # (poll_timeout) rather than landing next to etcd
                 [runners.kubernetes.node_selector]
-                  "node-role.kubernetes.io/worker" = "true"
+                  "thomvandev.in/role" = "worker"
 ```
 
 (Indentation: the `[runners.kubernetes.node_selector]` header sits at the same column as `[runners.kubernetes]`'s keys, i.e. 16 spaces; its key at 18.)
@@ -723,7 +723,7 @@ Expected: `True` and a disk entry with roughly 200 GB available.
 ```bash
 ssh homelab@192.168.178.151 'sudo k3s kubectl get node homelab-1 --show-labels | tr , "\n" | grep worker'
 ```
-Expected: `node-role.kubernetes.io/worker=true`.
+Expected: `thomvandev.in/role=worker`.
 
 - [ ] **Step 7: Repeat steps 1 to 6 for homelab-2** (`.#homelab-2`, `extra-files/homelab-2`, `192.168.178.153`).
 

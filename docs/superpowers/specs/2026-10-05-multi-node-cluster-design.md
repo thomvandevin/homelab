@@ -76,7 +76,7 @@ services.k3s = {
   clusterInit = meta.role == "server";
   extraFlags = server: write-kubeconfig-mode, --disable servicelb/traefik/local-storage
                agent:  none
-  nodeLabel = [ "node-role.kubernetes.io/worker=true" ];   # agents only
+  nodeLabel = [ "thomvandev.in/role=worker" ];   # agents only
   gracefulNodeShutdown.enable = true;     # agents: drain pods on reboot/poweroff
 };
 ```
@@ -141,9 +141,11 @@ device unconditionally).
 
 ### 6. Workload placement
 
-Workers register with `node-role.kubernetes.io/worker=true`
-(`services.k3s.nodeLabel`), so `kubectl get nodes` shows the role and
-manifests can select on one stable label. `homelab-0` keeps the
+Workers register with `thomvandev.in/role=worker` (`services.k3s.nodeLabel`).
+The kubelet refuses to self-assign anything under `node-role.kubernetes.io/`,
+so that label is added once by hand after the join, purely so
+`kubectl get nodes` shows `worker` in ROLES; manifests select on the
+`thomvandev.in` label. `homelab-0` keeps the
 `node-role.kubernetes.io/control-plane` label k3s already sets.
 
 Three placement rules, each a Helm named template in
@@ -153,7 +155,7 @@ Three placement rules, each a Helm named template in
 | Template | Mechanism | Applied to |
 |---|---|---|
 | `placement.homelab0` | `nodeSelector: kubernetes.io/hostname: homelab-0` (required) | home-assistant (chart `nodeSelector`), matter-server, unifi + unifi-mongo, docker-registry, closet minio, van-mierlo minio |
-| `placement.workersOnly` | `nodeSelector: node-role.kubernetes.io/worker: "true"` (required) | gitlab-runner and gitlab-runner-swiss-rounds job pods (`[runners.kubernetes.node_selector]`), ARC `RunnerDeployment`s |
+| `placement.workersOnly` | `nodeSelector: thomvandev.in/role: worker` (required) | gitlab-runner and gitlab-runner-swiss-rounds job pods (`[runners.kubernetes.node_selector]`), ARC `RunnerDeployment`s |
 | `placement.preferWorkers` | `nodeAffinity.preferredDuringScheduling`, weight 100 on the worker label | closet server/web/ai, limitless-tournament-decks, pokemon-bot (all Deployments and the rabbitmq StatefulSet), pokemon-index, scraper, slowpoke-bingo (+ sync CronJob), swiss-rounds (+ stg), flaresolverr, reposilite, end-of-year, pokemon-ai, van-mierlo backend/frontend |
 
 Why each pin:
