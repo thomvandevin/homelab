@@ -64,13 +64,29 @@ data:
   .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
 ---
 # -- PostgreSQL (pgvector) ----------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-data
+  namespace: pokemon-ai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgresql
   namespace: pokemon-ai
 spec:
-  replicas: 0
+  replicas: 1
+  # a RWO volume cannot be attached to the replacement pod while the old one holds it
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: postgresql
@@ -109,7 +125,8 @@ spec:
               memory: 512Mi
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: postgresql-data
 ---
 apiVersion: v1
 kind: Service
@@ -130,7 +147,7 @@ metadata:
   name: chat-api
   namespace: pokemon-ai
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: chat-api
@@ -206,7 +223,7 @@ metadata:
   name: card-api
   namespace: pokemon-ai
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: card-api
@@ -283,7 +300,7 @@ metadata:
   name: chat-ui
   namespace: pokemon-ai
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: chat-ui
@@ -328,7 +345,7 @@ metadata:
   name: mcp-server
   namespace: pokemon-ai
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: mcp-server
@@ -383,7 +400,7 @@ metadata:
   name: showcase-ui
   namespace: pokemon-ai
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: showcase-ui

@@ -45,7 +45,7 @@ metadata:
   name: end-of-year
   namespace: end-of-year
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
