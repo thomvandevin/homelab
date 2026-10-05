@@ -45,6 +45,8 @@ spec:
         persistence:
           enabled: true
         hostNetwork: true
+        nodeSelector:
+          kubernetes.io/hostname: homelab-0
         securityContext:
           privileged: true
         additionalVolumes:

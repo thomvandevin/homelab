@@ -79,6 +79,7 @@ spec:
       labels:
         app: postgresql
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       containers:
         - name: postgresql
           image: pgvector/pgvector:0.8.7-pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
@@ -138,6 +139,7 @@ spec:
       labels:
         app: chat-api
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -213,6 +215,7 @@ spec:
       labels:
         app: card-api
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       initContainers:
@@ -289,6 +292,7 @@ spec:
       labels:
         app: chat-ui
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -333,6 +337,7 @@ spec:
       labels:
         app: mcp-server
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -387,6 +392,7 @@ spec:
       labels:
         app: showcase-ui
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:

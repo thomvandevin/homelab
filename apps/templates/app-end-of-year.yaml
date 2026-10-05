@@ -59,6 +59,7 @@ spec:
       labels:
         app: end-of-year
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:

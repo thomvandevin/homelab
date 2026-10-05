@@ -20,6 +20,7 @@ spec:
       labels:
         app: flaresolverr
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       containers:
         - name: flaresolverr
           image: ghcr.io/flaresolverr/flaresolverr:v3.5.2

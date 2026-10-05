@@ -122,6 +122,7 @@ spec:
       labels:
         app: reposilite
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       containers:
         - name: reposilite
           image: dzikoysk/reposilite:3.6.3@sha256:90de4c8e6c0e7e6aef71a4d9e8f3fabb3ac354524e0d0245a8e3fa65bc5832fc
