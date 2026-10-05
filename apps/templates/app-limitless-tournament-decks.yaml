@@ -68,6 +68,7 @@ spec:
       labels:
         app: limitless-tournament-decks
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:

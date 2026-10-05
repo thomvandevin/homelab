@@ -36,6 +36,7 @@ spec:
       labels:
         app: matter-server
     spec:
+      {{- include "placement.homelab0" . | nindent 6 }}
       # Matter commissioning relies on IPv6 multicast and mDNS reaching the LAN and the
       # Thread border router, which the pod network cannot carry. It also puts the
       # websocket on the node, so Home Assistant (also hostNetwork) reaches it on localhost.

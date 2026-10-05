@@ -54,6 +54,7 @@ spec:
       labels:
         app: swiss-rounds
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -106,6 +107,7 @@ spec:
       labels:
         app: swiss-rounds-stg
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:

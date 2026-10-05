@@ -98,6 +98,7 @@ spec:
       labels:
         app: minio
     spec:
+      {{- include "placement.homelab0" . | nindent 6 }}
       containers:
         - name: minio
           # MinIO withdrew its public images; the node's cached copy (RELEASE.2025-09-07T16-13-09Z) is the only one
@@ -169,6 +170,7 @@ spec:
       labels:
         app: closet-server
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -310,6 +312,7 @@ spec:
       labels:
         app: closet-web
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -366,6 +369,7 @@ spec:
       labels:
         app: closet-ai
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:

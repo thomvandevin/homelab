@@ -66,6 +66,7 @@ spec:
       labels:
         app: rabbitmq
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       containers:
         - name: rabbitmq
           image: rabbitmq:4.3-management-alpine@sha256:ce634665a8e7262384a793581c20cb8a46343887446eb391b77c814febeca4b2
@@ -180,6 +181,7 @@ spec:
       labels:
         app: dashboard-backend
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -266,6 +268,7 @@ spec:
       labels:
         app: portal-backend
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -377,6 +380,7 @@ spec:
       labels:
         app: portal-frontend
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -420,6 +424,7 @@ spec:
       labels:
         app: dashboard-frontend
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -464,6 +469,7 @@ spec:
       labels:
         app: scraper-backend
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -558,6 +564,7 @@ spec:
       labels:
         app: fingerprint-fetcher
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       securityContext:
@@ -621,6 +628,7 @@ spec:
       labels:
         app: notifications-backend
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -718,6 +726,7 @@ spec:
       labels:
         app: checkout-backend
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:

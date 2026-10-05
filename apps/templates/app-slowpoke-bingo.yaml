@@ -122,6 +122,7 @@ spec:
       labels:
         app: slowpoke-bingo
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       imagePullSecrets:
         - name: gitlab-registry-secret
       containers:
@@ -200,6 +201,7 @@ spec:
       backoffLimit: 1
       template:
         spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
           imagePullSecrets:
             - name: gitlab-registry-secret
           containers:
