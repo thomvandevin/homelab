@@ -52,20 +52,16 @@ Move host-specific files into per-host directories and keep one shared
 
 ```
 nixos/
-  flake.nix                  nodes = { homelab-0 = server; homelab-1/2 = agent }
+  flake.nix                  nodes = { homelab-0 = {role=server; disk=/dev/sda; hardware=...}; homelab-1/2 = {role=agent; disk=/dev/nvme0n1; hardware=...} }
   configuration.nix          shared; role-dependent k3s block
+  disko-configuration.nix    shared; device = meta.disk
   hosts/
-    homelab-0/
-      hardware-configuration.nix   (moved, unchanged)
-      disko-configuration.nix      (moved, unchanged: /dev/sda)
-    homelab-1/
-      hardware-configuration.nix   nvme, xhci_pci, ahci, usbhid, sd_mod, kvm-intel
-      disko-configuration.nix      /dev/nvme0n1, + nodatacow /var/lib/longhorn subvolume
-    homelab-2/                     same as homelab-1
+    homelab-0.nix            hardware config (moved, unchanged: ahci/sd_mod, kvm-intel)
+    optiplex-5080-micro.nix  hardware config for both workers (nvme, xhci_pci, ahci, usbhid, sd_mod, kvm-intel)
 ```
 
-`flake.nix` passes `meta = { hostname; role; }` and imports
-`./hosts/${name}` for each node. `homelab-0`'s system closure must be
+`flake.nix` passes `meta = { hostname; role; disk; }` and imports the
+node's `hardware` file. `homelab-0`'s system closure must be
 identical before and after the refactor (verified with
 `nixos-rebuild build` on the host plus `nix store diff-closures`).
 
@@ -95,17 +91,23 @@ services.k3s = {
 ### 3. Disk layout on the workers
 
 Same btrfs scheme as `homelab-0` (ESP + btrfs with `rootfs`, `home`, `nix`
-subvolumes) plus one addition:
+subvolumes), from the one shared disko file with `device = meta.disk`.
+
+Longhorn replicas are sparse files with random 4K writes; on a CoW
+filesystem that doubles or triples the physical writes (measured ~2.4x
+amplification on `homelab-0`). btrfs only honours `nodatacow` for the whole
+filesystem, so the fix is the `C` attribute on the Longhorn directory, set
+by a tmpfiles rule on every node:
 
 ```
-"/var/lib/longhorn" = { mountOptions = [ "nodatacow" "noatime" ]; mountpoint = "/var/lib/longhorn"; };
+d /var/lib/longhorn 0700 root root -
+h /var/lib/longhorn - - - - +C
 ```
 
-Longhorn replicas are sparse files with random 4K writes; on a CoW filesystem
-that doubles or triples the physical writes (measured ~2.4x amplification on
-`homelab-0`). `nodatacow` on that subvolume gives Longhorn ext4-like write
-behaviour. It disables btrfs checksums and compression for that subvolume
-only; Longhorn carries its own replica integrity.
+New files under that directory inherit no-CoW (no checksums, no compression
+for them; Longhorn carries its own replica integrity). Existing replica
+files on `homelab-0` keep CoW; they get the benefit when a volume is
+rebuilt or a second replica is created on a worker.
 
 Device: `/dev/nvme0n1` is the expected disk in a 5080 Micro. `lsblk` on the
 installer must confirm this before `nixos-anywhere` runs (disko formats the
