@@ -2,6 +2,9 @@
 
 ## Building NixOS flake
 
+Hosts are listed in `flake.nix` (`nodes`); each entry names its role, disk and
+hardware file under `hosts/`.
+
 As the NixOS flake is in the dir `./nixos` we need to use the `?dir` parameter for the flake and then the flake path. For example:
 
 **Example dir parameter**
@@ -41,9 +44,9 @@ Seed the host key first (see Secrets), then:
 ```sh
 nix run github:nix-community/nixos-anywhere \
 --extra-experimental-features "nix-command flakes" \
--- --flake '.#homelab-0' \
+-- --flake '.#homelab-1' \
    --build-on remote \
-   --extra-files ./extra-files \
+   --extra-files ./extra-files/homelab-1 \
    --target-host nixos@host
 ```
 
@@ -62,11 +65,11 @@ To reinstall a host, generate its key up front rather than fixing sops
 afterwards, so decryption works on first boot instead of failing activation:
 
 ```sh
-mkdir -p extra-files/etc/ssh
-ssh-keygen -t ed25519 -N "" -C "root@homelab-0" -f extra-files/etc/ssh/ssh_host_ed25519_key
-chmod 600 extra-files/etc/ssh/ssh_host_ed25519_key
+mkdir -p extra-files/homelab-1/etc/ssh
+ssh-keygen -t ed25519 -N "" -C "root@homelab-1" -f extra-files/homelab-1/etc/ssh/ssh_host_ed25519_key
+chmod 600 extra-files/homelab-1/etc/ssh/ssh_host_ed25519_key
 
-nix run nixpkgs#ssh-to-age -- -i extra-files/etc/ssh/ssh_host_ed25519_key.pub
+nix run nixpkgs#ssh-to-age -- -i extra-files/homelab-1/etc/ssh/ssh_host_ed25519_key.pub
 ```
 
 Replace that host's entry in `.sops.yaml` with the printed `age1...` key, then
@@ -75,6 +78,9 @@ re-encrypt and pass `extra-files` to nixos-anywhere:
 ```sh
 sops --encrypt --input-type yaml --output-type yaml secrets.yaml.dec > secrets.yaml
 ```
+
+`k3s-token` must equal the control plane's
+`/var/lib/rancher/k3s/server/node-token`; agents present it to join.
 
 Verify you can still decrypt without the server before deploying:
 

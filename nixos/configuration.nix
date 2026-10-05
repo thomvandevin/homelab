@@ -76,6 +76,11 @@
   # Fixes for longhorn
   systemd.tmpfiles.rules = [
     "L+ /usr/local/bin - - - - /run/current-system/sw/bin/"
+    # Longhorn replicas are sparse files under random 4K writes; btrfs CoW
+    # multiplies the physical writes, and nodatacow is filesystem-wide, so the
+    # attribute goes on the directory and new replica files inherit it
+    "d /var/lib/longhorn 0700 root root -"
+    "h /var/lib/longhorn - - - - +C"
   ];
   virtualisation.docker.logDriver = "json-file";
 
@@ -85,7 +90,7 @@
   # which blocks k3s/flannel from annotating the Node, preventing all pod
   # networking from initializing. Longhorn manager recreates these webhooks
   # once its pods are running.
-  systemd.services.k3s-longhorn-webhook-cleanup = {
+  systemd.services.k3s-longhorn-webhook-cleanup = lib.mkIf (meta.role == "server") {
     description = "Delete stale Longhorn admission webhooks to prevent boot deadlock";
     after = [ "k3s.service" ];
     requires = [ "k3s.service" ];
@@ -117,29 +122,31 @@
   # Configure keymap in X11
   # services.xserver.xkb.layout = "us";
   # services.xserver.xkb.options = "eurosign:e,caps:escape";
-  services.k3s = {
-    enable = true;
-    role = "server";
-    # tokenFile = config.sops.secrets.k3s-token.path;
-    extraFlags = toString (
-      [
+  services.k3s = lib.mkMerge [
+    {
+      enable = true;
+      role = meta.role;
+    }
+    (lib.mkIf (meta.role == "server") {
+      clusterInit = true;
+      extraFlags = toString [
         "--write-kubeconfig-mode \"0644\""
-        "--cluster-init"
         "--disable servicelb"
         "--disable traefik"
         "--disable local-storage"
-      ]
-      ++ (
-        if meta.hostname == "homelab-0" then
-          [ ]
-        else
-          [
-            "--server https://192.168.178.151:6443"
-          ]
-      )
-    );
-    clusterInit = (meta.hostname == "homelab-0");
-  };
+      ];
+    })
+    (lib.mkIf (meta.role == "agent") {
+      serverAddr = "https://192.168.178.151:6443";
+      tokenFile = config.sops.secrets.k3s-token.path;
+      # the kubelet may not self-assign node-role.kubernetes.io labels, so
+      # workloads select on this one instead
+      nodeLabel = [ "thomvandev.in/role=worker" ];
+      # drain this node's pods on reboot or poweroff instead of letting them
+      # time out on the control plane
+      gracefulNodeShutdown.enable = true;
+    })
+  ];
 
   services.openiscsi = {
     enable = true;
