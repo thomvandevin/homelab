@@ -422,14 +422,10 @@ spec:
                   key: google-vision-api-key
           resources:
             requests:
-              # deliberately tiny: the node runs at ~96% CPU *requests*, and a
-              # bigger reservation here starved closet-server's Recreate
-              # rollout. closet-ai is IO-bound (waiting on OpenRouter), so it
-              # needs scheduling headroom, not a real CPU share.
-              cpu: 25m
+              cpu: 100m
               memory: 256Mi
             limits:
-              cpu: 500m
+              cpu: "1"
               memory: 512Mi
 ---
 apiVersion: v1
