@@ -2,6 +2,9 @@
 
 ## Building NixOS flake
 
+Hosts are listed in `flake.nix` (`nodes`); each entry names its role, disk and
+hardware file under `hosts/`.
+
 As the NixOS flake is in the dir `./nixos` we need to use the `?dir` parameter for the flake and then the flake path. For example:
 
 **Example dir parameter**

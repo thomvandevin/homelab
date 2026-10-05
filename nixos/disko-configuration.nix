@@ -1,9 +1,10 @@
+{ meta, ... }:
 {
   disko.devices = {
     disk = {
       vdb = {
         type = "disk";
-        device = "/dev/sda";
+        device = meta.disk;
         content = {
           type = "gpt";
           partitions = {

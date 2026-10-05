@@ -22,31 +22,43 @@
       ...
     }@inputs:
     let
-      nodes = [
-        "homelab-0"
-      ];
+      nodes = {
+        homelab-0 = {
+          role = "server";
+          disk = "/dev/sda";
+          hardware = ./hosts/homelab-0.nix;
+        };
+        homelab-1 = {
+          role = "agent";
+          disk = "/dev/nvme0n1";
+          hardware = ./hosts/optiplex-5080-micro.nix;
+        };
+        homelab-2 = {
+          role = "agent";
+          disk = "/dev/nvme0n1";
+          hardware = ./hosts/optiplex-5080-micro.nix;
+        };
+      };
     in
     {
-      nixosConfigurations = builtins.listToAttrs (
-        map (name: {
-          name = name;
-          value = nixpkgs.lib.nixosSystem {
-            specialArgs = {
-              meta = {
-                hostname = name;
-              };
+      nixosConfigurations = builtins.mapAttrs (
+        name: node:
+        nixpkgs.lib.nixosSystem {
+          specialArgs = {
+            meta = {
+              hostname = name;
+              inherit (node) role disk;
             };
-            system = "x86_64-linux";
-            modules = [
-              # Modules
-              disko.nixosModules.disko
-              sops-nix.nixosModules.sops
-              ./hardware-configuration.nix
-              ./disko-configuration.nix
-              ./configuration.nix
-            ];
           };
-        }) nodes
-      );
+          system = "x86_64-linux";
+          modules = [
+            disko.nixosModules.disko
+            sops-nix.nixosModules.sops
+            node.hardware
+            ./disko-configuration.nix
+            ./configuration.nix
+          ];
+        }
+      ) nodes;
     };
 }
