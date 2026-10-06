@@ -155,3 +155,43 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
+---
+# Nightly TCGdex sync: compiles the card database and uploads it to /admin/sync/tcgdex.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pokemon-api-tcgdex-sync
+  namespace: pokemon-api
+spec:
+  schedule: "30 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          imagePullSecrets:
+            - name: gitlab-registry-secret
+          restartPolicy: OnFailure
+          containers:
+            - name: sync
+              image: registry.gitlab.com/thomvandevin-projects/pokemon-api/tcgdex-sync:latest
+              imagePullPolicy: Always
+              env:
+                - name: POKEMON_API_URL
+                  value: http://pokemon-api.pokemon-api.svc.cluster.local:8080
+                - name: ADMIN_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: api-secret
+                      key: admin-token
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+                limits:
+                  cpu: 2000m
+                  memory: 3Gi
