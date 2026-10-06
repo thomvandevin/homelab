@@ -178,6 +178,64 @@ spec:
                   memory: 128Mi
           restartPolicy: OnFailure
 ---
+# GLC and Expanded events are few per day and the scraper is throttled against
+# Limitless, so these run six-hourly rather than three-hourly.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: limitless-preload-pokemon-glc
+  namespace: limitless-tournament-decks
+spec:
+  schedule: "20 */6 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+              args:
+                - curl
+                - -X
+                - GET
+                - http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local/preload?game=PTCG&format=glc&maxTournaments=10&preloadStandings=true&preloadDecklists=true&maxDecksPerTournament=-1
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: limitless-preload-pokemon-expanded
+  namespace: limitless-tournament-decks
+spec:
+  schedule: "40 */6 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+              args:
+                - curl
+                - -X
+                - GET
+                - http://limitless-tournament-decks-svc.limitless-tournament-decks.svc.cluster.local/preload?game=PTCG&format=expanded&maxTournaments=10&preloadStandings=true&preloadDecklists=true&maxDecksPerTournament=-1
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+          restartPolicy: OnFailure
+---
 # Officially sanctioned events -- Regionals, Internationals, Worlds -- scraped
 # from limitlesstcg.com and onepiece.limitlesstcg.com rather than the play site.
 #
