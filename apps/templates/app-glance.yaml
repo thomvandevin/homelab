@@ -142,7 +142,7 @@ spec:
               port: http
             periodSeconds: 10
         - name: facts
-          image: alpine/k8s:1.36.5
+          image: alpine/k8s:1.37.1@sha256:712dc5385d1c1a3f83b747fa9e40f64d433a97f72ff42f9755ff7dd1f62846e4
           command: [sh, /facts/facts.sh]
           volumeMounts:
             - name: facts
