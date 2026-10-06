@@ -1,7 +1,7 @@
 {{/*
 Pod-spec fragments for node placement. homelab-0 is the control plane and the
 only host with the Zigbee/Bluetooth hardware, the UniFi inform address and the
-registry hostPath; workers carry node-role.kubernetes.io/worker=true.
+registry hostPath; workers carry thomvandev.in/role=worker.
 */}}
 
 {{- define "placement.homelab0" -}}
@@ -11,7 +11,7 @@ nodeSelector:
 
 {{- define "placement.workersOnly" -}}
 nodeSelector:
-  node-role.kubernetes.io/worker: "true"
+  thomvandev.in/role: worker
 {{- end -}}
 
 {{- define "placement.preferWorkers" -}}
@@ -21,7 +21,7 @@ affinity:
       - weight: 100
         preference:
           matchExpressions:
-            - key: node-role.kubernetes.io/worker
+            - key: thomvandev.in/role
               operator: In
-              values: ["true"]
+              values: ["worker"]
 {{- end -}}
