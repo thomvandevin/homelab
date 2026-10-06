@@ -1,0 +1,68 @@
+  - name: GitLab
+    columns:
+      - size: full
+        widgets:
+          - type: custom-api
+            title: Latest pipelines
+            cache: 5m
+            url: https://gitlab.com/api/graphql
+            method: POST
+            body-type: json
+            headers:
+              Authorization: Bearer ${GITLAB_TOKEN}
+            body:
+              query: >-
+                { own: group(fullPath: "thomvandevin-projects") { projects(includeSubgroups: true, first: 40, sort: LATEST_ACTIVITY_DESC) { nodes { name webUrl lastActivityAt pipelines(first: 1) { nodes { status finishedAt ref duration path } } } } }
+                  swiss: group(fullPath: "swiss-rounds") { projects(first: 10, sort: LATEST_ACTIVITY_DESC) { nodes { name webUrl lastActivityAt pipelines(first: 1) { nodes { status finishedAt ref duration path } } } } } }
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "data.own.projects.nodes" }}
+                {{ $status := .String "pipelines.nodes.0.status" }}
+                <div class="flex items-center" style="gap:10px">
+                  <span class="{{ if eq $status "SUCCESS" }}color-positive{{ else if or (eq $status "RUNNING") (eq $status "PENDING") }}color-primary{{ else if eq $status "" }}color-subdue{{ else }}color-negative{{ end }}">●</span>
+                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                    <a class="size-h5 color-highlight" href="{{ .String "webUrl" }}" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
+                    <span class="size-h6 color-subdue">{{ .String "pipelines.nodes.0.ref" }}</span>
+                  </div>
+                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                    {{ if eq $status "" }}no pipelines{{ else }}<a class="color-paragraph" href="https://gitlab.com{{ .String "pipelines.nodes.0.path" }}" target="_blank" rel="noreferrer">{{ $status }}</a> · <span {{ .String "pipelines.nodes.0.finishedAt" | parseTime "rfc3339" | toRelativeTime }}></span>{{ end }}
+                  </div>
+                </div>
+              {{ end }}
+              {{ range .JSON.Array "data.swiss.projects.nodes" }}
+                {{ $status := .String "pipelines.nodes.0.status" }}
+                <div class="flex items-center" style="gap:10px">
+                  <span class="{{ if eq $status "SUCCESS" }}color-positive{{ else if or (eq $status "RUNNING") (eq $status "PENDING") }}color-primary{{ else if eq $status "" }}color-subdue{{ else }}color-negative{{ end }}">●</span>
+                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                    <a class="size-h5 color-highlight" href="{{ .String "webUrl" }}" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
+                    <span class="size-h6 color-subdue">{{ .String "pipelines.nodes.0.ref" }}</span>
+                  </div>
+                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                    {{ if eq $status "" }}no pipelines{{ else }}<a class="color-paragraph" href="https://gitlab.com{{ .String "pipelines.nodes.0.path" }}" target="_blank" rel="noreferrer">{{ $status }}</a> · <span {{ .String "pipelines.nodes.0.finishedAt" | parseTime "rfc3339" | toRelativeTime }}></span>{{ end }}
+                  </div>
+                </div>
+              {{ end }}
+              </div>
+
+      - size: small
+        widgets:
+          - type: custom-api
+            title: Open merge requests
+            cache: 5m
+            url: https://gitlab.com/api/v4/merge_requests
+            parameters:
+              state: opened
+              scope: all
+              per_page: 30
+            headers:
+              PRIVATE-TOKEN: ${GITLAB_TOKEN}
+            template: |
+              {{ if eq (len (.JSON.Array "")) 0 }}<div class="size-h6 color-subdue">None</div>{{ end }}
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "" }}
+                <div>
+                  <a class="size-h5 color-highlight text-truncate block" href="{{ .String "web_url" }}" target="_blank" rel="noreferrer">{{ .String "title" }}</a>
+                  <div class="size-h6 color-subdue">{{ .String "references.full" }} · {{ .String "author.username" }} · <span {{ .String "updated_at" | parseTime "rfc3339" | toRelativeTime }}></span>{{ if .Bool "draft" }} · draft{{ end }}</div>
+                </div>
+              {{ end }}
+              </div>
