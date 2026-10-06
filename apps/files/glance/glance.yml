@@ -89,6 +89,7 @@ pages:
                 {{ if .Bool "own" }}
                 <div class="flex items-center" style="gap:10px">
                   <span class="{{ if .Bool "healthy" }}color-positive{{ else }}color-negative{{ end }}">●</span>
+                  {{ if .String "icon" }}<img class="docker-container-icon{{ if .Bool "iconInvert" }} flat-icon{{ end }}" src="{{ .String "icon" }}" alt="" loading="lazy" style="flex:0 0 auto">{{ else }}<span class="size-h6 color-highlight" style="flex:0 0 auto;width:20px;height:20px;line-height:20px;text-align:center;border-radius:4px;background:var(--color-separator)">{{ printf "%.1s" (.String "name") }}</span>{{ end }}
                   <div style="flex:1 1 auto;min-width:0">
                     <div class="flex items-center" style="gap:10px">
                       <span class="size-h4 color-highlight text-truncate">{{ .String "name" }}</span>
@@ -111,6 +112,7 @@ pages:
                 {{ if not (.Bool "own") }}
                 <div class="flex items-center" style="gap:10px">
                   <span class="{{ if .Bool "healthy" }}color-positive{{ else }}color-negative{{ end }}">●</span>
+                  {{ if .String "icon" }}<img class="docker-container-icon{{ if .Bool "iconInvert" }} flat-icon{{ end }}" src="{{ .String "icon" }}" alt="" loading="lazy" style="flex:0 0 auto">{{ else }}<span class="size-h6 color-highlight" style="flex:0 0 auto;width:20px;height:20px;line-height:20px;text-align:center;border-radius:4px;background:var(--color-separator)">{{ printf "%.1s" (.String "name") }}</span>{{ end }}
                   <div style="flex:1 1 auto;min-width:0">
                     <span class="size-h4 color-highlight">{{ .String "name" }}</span>
                     <span class="size-h6 color-subdue">{{ .Int "ready" }}/{{ .Int "desired" }}{{ if gt (.Int "restarts") 0 }} · {{ .Int "restarts" }} restarts{{ end }}{{ if .Exists "argocd.health" }}{{ if ne (.String "argocd.health") "Healthy" }} · <span class="color-negative">{{ .String "argocd.health" }}</span>{{ end }}{{ end }}</span>
@@ -308,6 +310,7 @@ pages:
               {{ range .JSON.Array "platform" }}
                 <div class="flex items-center" style="gap:10px">
                   <span class="{{ if .Bool "healthy" }}color-positive{{ else }}color-negative{{ end }}">●</span>
+                  {{ if .String "icon" }}<img class="docker-container-icon{{ if .Bool "iconInvert" }} flat-icon{{ end }}" src="{{ .String "icon" }}" alt="" loading="lazy" style="flex:0 0 auto">{{ else }}<span class="size-h6 color-highlight" style="flex:0 0 auto;width:20px;height:20px;line-height:20px;text-align:center;border-radius:4px;background:var(--color-separator)">{{ printf "%.1s" (.String "name") }}</span>{{ end }}
                   <div style="flex:1 1 auto;min-width:0"><span class="size-h5 color-highlight">{{ .String "name" }}</span> <span class="size-h6 color-subdue">{{ .Int "ready" }}/{{ .Int "desired" }}{{ if gt (.Int "restarts") 0 }} · {{ .Int "restarts" }} restarts{{ end }}</span></div>
                   <div class="size-h6 text-right" style="flex:0 0 auto">{{ range .Array "links" }}<a class="color-primary" href="{{ .String "url" }}" target="_blank" rel="noreferrer">{{ .String "label" }}</a>&nbsp;&nbsp;{{ end }}</div>
                 </div>

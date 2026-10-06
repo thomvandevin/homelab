@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    glance/icon: mdi:api
   name: pokemon-api
 ---
 # -- RBAC for GitLab runner deploy step ----------------------------------------

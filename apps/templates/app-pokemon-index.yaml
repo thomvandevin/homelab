@@ -5,6 +5,7 @@ metadata:
   labels:
     name: pokemon-index
   annotations:
+    glance/icon: si:pokemon
     argocd.argoproj.io/sync-wave: "0"
 ---
 # -- RBAC for GitLab runner deploy step ----------------------------------------

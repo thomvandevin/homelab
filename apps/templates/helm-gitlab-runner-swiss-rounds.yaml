@@ -6,6 +6,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    glance/icon: di:gitlab
   name: gitlab-runner-swiss-rounds
   labels:
     name: gitlab-runner-swiss-rounds

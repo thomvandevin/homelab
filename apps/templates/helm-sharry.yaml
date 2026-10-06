@@ -10,6 +10,8 @@ data:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  annotations:
+    glance/icon: di:sharry
   name: sharry
   namespace: argocd
 spec:

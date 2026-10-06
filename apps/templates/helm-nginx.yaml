@@ -1,6 +1,8 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  annotations:
+    glance/icon: di:nginx
   name: ingress-nginx-internal
   namespace: argocd
 spec:

@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    glance/icon: sh:glance
   name: glance
   labels:
     name: glance
@@ -18,7 +20,7 @@ metadata:
   name: glance-facts
 rules:
   - apiGroups: [""]
-    resources: [nodes, pods, services, persistentvolumeclaims]
+    resources: [nodes, namespaces, pods, services, persistentvolumeclaims]
     verbs: [get, list]
   - apiGroups: [""]
     resources: [configmaps]

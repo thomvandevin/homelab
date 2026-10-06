@@ -11,6 +11,8 @@ data:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  annotations:
+    glance/icon: di:tailscale
   name: tailscale
   namespace: argocd
 spec:
