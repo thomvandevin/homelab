@@ -278,7 +278,6 @@ spec:
               cpu: 100m
               memory: 512Mi
             limits:
-              cpu: "1"
               memory: 1Gi
 ---
 apiVersion: v1
@@ -335,7 +334,6 @@ spec:
               cpu: 50m
               memory: 64Mi
             limits:
-              cpu: 200m
               memory: 128Mi
 ---
 apiVersion: v1
@@ -425,7 +423,6 @@ spec:
               cpu: 100m
               memory: 256Mi
             limits:
-              cpu: "1"
               memory: 512Mi
 ---
 apiVersion: v1

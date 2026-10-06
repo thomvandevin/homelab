@@ -83,7 +83,6 @@ spec:
               cpu: 100m
               memory: 256Mi
             limits:
-              cpu: 500m
               memory: 512Mi
           volumeMounts:
             - name: rabbitmq-data
@@ -227,7 +226,6 @@ spec:
               cpu: 100m
               memory: 256Mi
             limits:
-              cpu: 500m
               memory: 512Mi
 ---
 apiVersion: v1
@@ -357,7 +355,6 @@ spec:
               cpu: 100m
               memory: 256Mi
             limits:
-              cpu: 500m
               memory: 512Mi
 ---
 apiVersion: v1
@@ -401,7 +398,6 @@ spec:
               cpu: 50m
               memory: 64Mi
             limits:
-              cpu: 200m
               memory: 128Mi
 ---
 apiVersion: v1
@@ -445,7 +441,6 @@ spec:
               cpu: 50m
               memory: 64Mi
             limits:
-              cpu: 200m
               memory: 128Mi
 ---
 apiVersion: v1
@@ -536,10 +531,9 @@ spec:
           resources:
             requests:
               cpu: 500m
-              memory: 1Gi
+              memory: 1536Mi
             limits:
-              cpu: "2"
-              memory: 2Gi
+              memory: 3Gi
 ---
 apiVersion: v1
 kind: Service
@@ -604,7 +598,6 @@ spec:
               cpu: 20m
               memory: 64Mi
             limits:
-              cpu: 250m
               memory: 256Mi
 ---
 apiVersion: v1
@@ -702,7 +695,6 @@ spec:
               cpu: 250m
               memory: 512Mi
             limits:
-              cpu: "1"
               memory: 1Gi
 ---
 apiVersion: v1
@@ -791,7 +783,6 @@ spec:
               cpu: 250m
               memory: 512Mi
             limits:
-              cpu: "1"
               memory: 1Gi
 ---
 apiVersion: v1

@@ -39,6 +39,9 @@ spec:
           # Left at the chart default of 0, engines are never upgraded with the manager;
           # volumes had drifted across four engine versions back to v1.9.0
           concurrentAutomaticEngineUpgradePerNodeLimit: 1
+          # the 12% default reserved 4.8 cores cluster-wide for managers that
+          # use a tenth of that; takes effect per node once its volumes reattach
+          guaranteedInstanceManagerCPU: 5
           # a pod whose node died is rescheduled instead of staying Terminating
           nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
   destination:

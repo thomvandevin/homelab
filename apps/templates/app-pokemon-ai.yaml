@@ -121,7 +121,6 @@ spec:
               cpu: 100m
               memory: 256Mi
             limits:
-              cpu: 250m
               memory: 512Mi
       volumes:
         - name: data
@@ -217,7 +216,6 @@ spec:
               cpu: 200m
               memory: 512Mi
             limits:
-              cpu: 1000m
               memory: 1Gi
 ---
 apiVersion: v1
@@ -294,7 +292,6 @@ spec:
               cpu: 100m
               memory: 256Mi
             limits:
-              cpu: 500m
               memory: 512Mi
 ---
 apiVersion: v1
@@ -339,7 +336,6 @@ spec:
               cpu: 50m
               memory: 64Mi
             limits:
-              cpu: 200m
               memory: 128Mi
 ---
 apiVersion: v1
@@ -394,7 +390,6 @@ spec:
               cpu: 50m
               memory: 64Mi
             limits:
-              cpu: 200m
               memory: 128Mi
 ---
 apiVersion: v1

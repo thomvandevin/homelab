@@ -129,6 +129,14 @@
     }
     (lib.mkIf (meta.role == "server") {
       clusterInit = true;
+      # etcd and the API server share this node with pods that have no CPU
+      # limits; keep a slice of the node for them
+      extraKubeletConfig = {
+        systemReserved = {
+          cpu = "500m";
+          memory = "1Gi";
+        };
+      };
       extraFlags = toString [
         "--write-kubeconfig-mode \"0644\""
         "--disable servicelb"
