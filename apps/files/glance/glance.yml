@@ -1,0 +1,335 @@
+# Everything on this dashboard is rendered from facts.json, which the facts
+# sidecar derives from the Kubernetes API; see facts.jq. Add an app with a
+# tunnel route or an Ingress and it shows up here by itself.
+
+server:
+  host: 0.0.0.0
+  port: 8080
+
+branding:
+  logo-text: HL
+  app-name: Homelab
+
+theme:
+  background-color: 225 14 15
+  primary-color: 25 89 62
+  negative-color: 359 68 61
+  contrast-multiplier: 1.1
+
+# `custom-widgets` is not a Glance property; it only hosts the anchor.
+custom-widgets:
+  - &facts
+    type: custom-api
+    url: http://localhost:8081/facts.json
+    cache: 1m
+
+pages:
+  - name: Home
+    columns:
+      - size: full
+        widgets:
+          - <<: *facts
+            title: Nodes
+            template: |
+              <div class="list list-gap-14">
+              {{ range .JSON.Array "nodes" }}
+                {{ $cpuPct := div (mul (.Float "cpu.used") 100) (.Float "cpu.allocatable") }}
+                {{ $cpuReqPct := div (mul (.Float "cpu.requested") 100) (.Float "cpu.allocatable") }}
+                {{ $memPct := div (mul (.Float "mem.used") 100) (.Float "mem.allocatable") }}
+                {{ $memReqPct := div (mul (.Float "mem.requested") 100) (.Float "mem.allocatable") }}
+                {{ $diskPct := div (mul (sub (.Float "disk.max") (.Float "disk.available")) 100) (.Float "disk.max") }}
+                <div>
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <span class="size-h3 color-highlight">{{ .String "name" }}</span>
+                      <span class="size-h5 color-subdue">{{ .String "role" }}</span>
+                    </div>
+                    <div class="size-h5">
+                      {{ if .Bool "ready" }}<span class="color-positive">Ready</span>{{ else }}<span class="color-negative">NotReady</span>{{ end }}
+                      {{ if not (.Bool "schedulable") }}<span class="color-negative">cordoned</span>{{ end }}
+                      {{ if not (.Bool "longhornReady") }}<span class="color-negative">storage</span>{{ end }}
+                    </div>
+                  </div>
+                  <ul class="list-horizontal-text size-h5 margin-top-5">
+                    <li>{{ .Int "pods" }} pods</li>
+                    <li>{{ .String "kernel" }}</li>
+                    <li>{{ .String "k3s" }}</li>
+                  </ul>
+                  <div class="flex margin-top-10" style="flex-wrap:wrap;gap:15px">
+                    <div style="flex:1 1 180px">
+                      <div class="flex justify-between size-h6"><span>CPU</span><span class="color-subdue">{{ .Float "cpu.used" }} used · {{ .Float "cpu.requested" }} req · {{ .Float "cpu.allocatable" }} cores</span></div>
+                      <div style="position:relative;height:6px;border-radius:3px;background:var(--color-separator);margin-top:4px;overflow:hidden">
+                        <div style="position:absolute;inset:0;width:{{ printf "%.0f" $cpuReqPct }}%;background:var(--color-primary);opacity:.3"></div>
+                        <div style="position:absolute;inset:0;width:{{ printf "%.0f" $cpuPct }}%;background:var(--color-primary)"></div>
+                      </div>
+                    </div>
+                    <div style="flex:1 1 180px">
+                      <div class="flex justify-between size-h6"><span>Memory</span><span class="color-subdue">{{ .Float "mem.used" }} used · {{ .Float "mem.requested" }} req · {{ .Float "mem.allocatable" }} GiB</span></div>
+                      <div style="position:relative;height:6px;border-radius:3px;background:var(--color-separator);margin-top:4px;overflow:hidden">
+                        <div style="position:absolute;inset:0;width:{{ printf "%.0f" $memReqPct }}%;background:var(--color-primary);opacity:.3"></div>
+                        <div style="position:absolute;inset:0;width:{{ printf "%.0f" $memPct }}%;background:var(--color-primary)"></div>
+                      </div>
+                    </div>
+                    <div style="flex:1 1 180px">
+                      <div class="flex justify-between size-h6"><span>Disk</span><span class="color-subdue">{{ .Float "disk.scheduled" }} scheduled · {{ .Float "disk.available" }} free · {{ .Float "disk.max" }} GiB</span></div>
+                      <div style="position:relative;height:6px;border-radius:3px;background:var(--color-separator);margin-top:4px;overflow:hidden">
+                        <div style="position:absolute;inset:0;width:{{ printf "%.0f" $diskPct }}%;background:{{ if gt $diskPct 85.0 }}var(--color-negative){{ else }}var(--color-primary){{ end }}"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {{ end }}
+              </div>
+
+          - <<: *facts
+            title: Apps
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "apps" }}
+                {{ if .Bool "own" }}
+                <div class="flex items-center" style="gap:10px">
+                  <span class="{{ if .Bool "healthy" }}color-positive{{ else }}color-negative{{ end }}">●</span>
+                  <div style="flex:1 1 auto;min-width:0">
+                    <div class="flex items-center" style="gap:10px">
+                      <span class="size-h4 color-highlight text-truncate">{{ .String "name" }}</span>
+                      <span class="size-h6 color-subdue">{{ .Int "ready" }}/{{ .Int "desired" }}{{ if gt (.Int "restarts") 0 }} · {{ .Int "restarts" }} restarts{{ end }}{{ if .Exists "argocd.sync" }}{{ if ne (.String "argocd.sync") "Synced" }} · <span class="color-negative">{{ .String "argocd.sync" }}</span>{{ end }}{{ if ne (.String "argocd.health") "Healthy" }} · <span class="color-negative">{{ .String "argocd.health" }}</span>{{ end }}{{ end }}</span>
+                    </div>
+                  </div>
+                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                    {{ range .Array "links" }}<a class="color-primary" href="{{ .String "url" }}" target="_blank" rel="noreferrer" title="{{ .String "kind" }}">{{ .String "label" }}</a>&nbsp;&nbsp;{{ end }}
+                  </div>
+                </div>
+                {{ end }}
+              {{ end }}
+              </div>
+
+          - <<: *facts
+            title: Services
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "apps" }}
+                {{ if not (.Bool "own") }}
+                <div class="flex items-center" style="gap:10px">
+                  <span class="{{ if .Bool "healthy" }}color-positive{{ else }}color-negative{{ end }}">●</span>
+                  <div style="flex:1 1 auto;min-width:0">
+                    <span class="size-h4 color-highlight">{{ .String "name" }}</span>
+                    <span class="size-h6 color-subdue">{{ .Int "ready" }}/{{ .Int "desired" }}{{ if gt (.Int "restarts") 0 }} · {{ .Int "restarts" }} restarts{{ end }}{{ if .Exists "argocd.health" }}{{ if ne (.String "argocd.health") "Healthy" }} · <span class="color-negative">{{ .String "argocd.health" }}</span>{{ end }}{{ end }}</span>
+                  </div>
+                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                    {{ range .Array "links" }}<a class="color-primary" href="{{ .String "url" }}" target="_blank" rel="noreferrer" title="{{ .String "kind" }}">{{ .String "label" }}</a>&nbsp;&nbsp;{{ end }}
+                  </div>
+                </div>
+                {{ end }}
+              {{ end }}
+              </div>
+
+      - size: small
+        widgets:
+          - type: clock
+            hour-format: 24h
+
+          - <<: *facts
+            title: Health
+            template: |
+              {{ $nodesReady := 0.0 }}{{ $nodes := 0.0 }}
+              {{ range .JSON.Array "nodes" }}{{ $nodes = add $nodes 1 }}{{ if .Bool "ready" }}{{ $nodesReady = add $nodesReady 1 }}{{ end }}{{ end }}
+              {{ $appsOk := 0.0 }}{{ $apps := 0.0 }}
+              {{ range .JSON.Array "apps" }}{{ $apps = add $apps 1 }}{{ if .Bool "healthy" }}{{ $appsOk = add $appsOk 1 }}{{ end }}{{ end }}
+              {{ range .JSON.Array "platform" }}{{ $apps = add $apps 1 }}{{ if .Bool "healthy" }}{{ $appsOk = add $appsOk 1 }}{{ end }}{{ end }}
+              {{ $argoOk := 0.0 }}{{ $argo := 0.0 }}
+              {{ range .JSON.Array "argocd" }}{{ $argo = add $argo 1 }}{{ if and (eq (.String "sync") "Synced") (eq (.String "health") "Healthy") }}{{ $argoOk = add $argoOk 1 }}{{ end }}{{ end }}
+              {{ $volOk := 0.0 }}{{ $vols := 0.0 }}
+              {{ range .JSON.Array "storage.volumes" }}{{ $vols = add $vols 1 }}{{ if or (eq (.String "robustness") "healthy") (eq (.String "state") "detached") }}{{ $volOk = add $volOk 1 }}{{ end }}{{ end }}
+              {{ $jobs := len (.JSON.Array "ci.jobs") }}
+              <div class="list list-gap-10">
+                <div class="flex justify-between"><span>Nodes</span><span class="{{ if eq $nodesReady $nodes }}color-positive{{ else }}color-negative{{ end }}">{{ $nodesReady }} / {{ $nodes }}</span></div>
+                <div class="flex justify-between"><span>Apps</span><span class="{{ if eq $appsOk $apps }}color-positive{{ else }}color-negative{{ end }}">{{ $appsOk }} / {{ $apps }}</span></div>
+                <div class="flex justify-between"><span>ArgoCD synced</span><span class="{{ if eq $argoOk $argo }}color-positive{{ else }}color-negative{{ end }}">{{ $argoOk }} / {{ $argo }}</span></div>
+                <div class="flex justify-between"><span>Volumes healthy</span><span class="{{ if eq $volOk $vols }}color-positive{{ else }}color-negative{{ end }}">{{ $volOk }} / {{ $vols }}</span></div>
+                <div class="flex justify-between"><span>CI jobs running</span><span>{{ $jobs }}</span></div>
+                <div class="size-h6 color-subdue">updated <span {{ .JSON.String "generatedAt" | parseTime "rfc3339" | toRelativeTime }}></span></div>
+              </div>
+
+          - type: bookmarks
+            title: Tools
+            groups:
+              - links:
+                  - title: ArgoCD
+                    url: https://argocd.snowy-gorgon.ts.net
+                  - title: Longhorn
+                    url: https://longhorn.snowy-gorgon.ts.net
+                  - title: Home Assistant
+                    url: https://home-assistant.snowy-gorgon.ts.net
+                  - title: UniFi
+                    url: https://192.168.178.151:8443
+                  - title: Registry
+                    url: https://registry.snowy-gorgon.ts.net
+                  - title: Media dashboard
+                    url: http://homelab-media/
+              - title: Code
+                links:
+                  - title: homelab on GitHub
+                    url: https://github.com/thomvandevin/homelab
+                  - title: Projects on GitLab
+                    url: https://gitlab.com/thomvandevin-projects
+
+          - type: releases
+            cache: 6h
+            title: Upstream
+            repositories:
+              - k3s-io/k3s
+              - longhorn/longhorn
+              - argoproj/argo-cd
+              - home-assistant/core
+              - glanceapp/glance
+
+  - name: Workloads
+    columns:
+      - size: full
+        widgets:
+          - <<: *facts
+            title: Deployments, StatefulSets, DaemonSets
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "workloads" }}
+                <div class="flex items-center" style="gap:10px">
+                  <span class="{{ if ge (.Int "ready") (.Int "desired") }}color-positive{{ else }}color-negative{{ end }}">●</span>
+                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                    <span class="size-h5 color-highlight">{{ .String "namespace" }}/{{ .String "name" }}</span>
+                    <span class="size-h6 color-subdue">{{ .String "kind" }} · {{ .String "tag" }}</span>
+                  </div>
+                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                    {{ .Int "ready" }}/{{ .Int "desired" }}
+                    {{ if gt (.Int "restarts") 0 }}· <span class="{{ if gt (.Int "restarts") 10 }}color-negative{{ end }}">{{ .Int "restarts" }} restarts</span>{{ end }}
+                    · on {{ .String "nodes" }} · {{ .String "age" }}
+                  </div>
+                </div>
+              {{ end }}
+              </div>
+
+      - size: small
+        widgets:
+          - <<: *facts
+            title: CI
+            template: |
+              <div class="list list-gap-10">
+                {{ range .JSON.Array "ci.managers" }}
+                <div class="flex justify-between size-h6" style="gap:10px"><span class="text-truncate">{{ .String "namespace" }}</span><span class="{{ if eq (.String "phase") "Running" }}color-positive{{ else }}color-negative{{ end }}" style="flex:0 0 auto">{{ .String "phase" }} · {{ .String "node" }}</span></div>
+                {{ end }}
+                {{ range .JSON.Array "ci.arc" }}
+                <div class="flex justify-between size-h6" style="gap:10px"><span class="text-truncate">{{ .String "name" }}</span><span class="{{ if eq (.String "phase") "Running" }}color-positive{{ else }}color-negative{{ end }}" style="flex:0 0 auto">{{ .String "phase" }} · {{ .String "node" }}</span></div>
+                {{ end }}
+                {{ $jobs := .JSON.Array "ci.jobs" }}
+                {{ if gt (len $jobs) 0 }}
+                <div class="size-h6 color-subdue margin-top-10">Job pods</div>
+                {{ range $jobs }}
+                <div class="flex justify-between size-h6" style="gap:10px"><span class="text-truncate">{{ .String "name" }}</span><span class="{{ if eq (.String "phase") "Running" }}color-positive{{ else if eq (.String "phase") "Pending" }}color-subdue{{ else }}color-negative{{ end }}" style="flex:0 0 auto">{{ .String "phase" }} · {{ .String "age" }}</span></div>
+                {{ end }}
+                {{ else }}
+                <div class="size-h6 color-subdue margin-top-10">No job pods</div>
+                {{ end }}
+              </div>
+
+          - <<: *facts
+            title: CronJobs
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "cronjobs" }}
+                <div class="flex justify-between size-h6" style="gap:10px">
+                  <span class="text-truncate">{{ .String "name" }}{{ if .Bool "suspended" }} <span class="color-subdue">(suspended)</span>{{ end }}</span>
+                  <span class="{{ if .Bool "ok" }}color-positive{{ else }}color-negative{{ end }}" title="{{ .String "schedule" }}">{{ if .String "lastSuccess" }}{{ .String "lastSuccess" }} ago{{ else }}never{{ end }}</span>
+                </div>
+              {{ end }}
+              </div>
+
+  - name: Storage
+    columns:
+      - size: full
+        widgets:
+          - <<: *facts
+            title: Longhorn volumes
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "storage.volumes" }}
+                <div class="flex items-center" style="gap:10px">
+                  <span class="{{ if eq (.String "robustness") "healthy" }}color-positive{{ else if eq (.String "state") "detached" }}color-subdue{{ else }}color-negative{{ end }}">●</span>
+                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                    <span class="size-h5 color-highlight">{{ .String "namespace" }}/{{ .String "pvc" }}</span>
+                  </div>
+                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                    {{ .Float "sizeGi" }} GiB · {{ .String "state" }} · {{ .String "robustness" }} · replicas on {{ .String "replicaNodes" }} · engine {{ .String "engine" }}
+                  </div>
+                </div>
+              {{ end }}
+              </div>
+
+      - size: small
+        widgets:
+          - <<: *facts
+            title: Node disks
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "nodes" }}
+                {{ $pct := div (mul (sub (.Float "disk.max") (.Float "disk.available")) 100) (.Float "disk.max") }}
+                <div>
+                  <div class="flex justify-between size-h5"><span class="color-highlight">{{ .String "name" }}</span><span class="color-subdue">{{ .Float "disk.available" }} GiB free</span></div>
+                  <div style="position:relative;height:6px;border-radius:3px;background:var(--color-separator);margin-top:4px;overflow:hidden">
+                    <div style="position:absolute;inset:0;width:{{ printf "%.0f" $pct }}%;background:{{ if gt $pct 85.0 }}var(--color-negative){{ else }}var(--color-primary){{ end }}"></div>
+                  </div>
+                  <div class="size-h6 color-subdue margin-top-5">{{ .Float "disk.scheduled" }} GiB scheduled of {{ .Float "disk.max" }}</div>
+                </div>
+              {{ end }}
+              </div>
+
+  - name: Platform
+    columns:
+      - size: full
+        widgets:
+          - <<: *facts
+            title: ArgoCD applications
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "argocd" }}
+                <div class="flex items-center" style="gap:10px">
+                  <span class="{{ if and (eq (.String "sync") "Synced") (eq (.String "health") "Healthy") }}color-positive{{ else }}color-negative{{ end }}">●</span>
+                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                    <a class="size-h5 color-highlight" href="https://argocd.snowy-gorgon.ts.net/applications/argocd/{{ .String "name" }}" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
+                    <span class="size-h6 color-subdue">{{ .String "source" }}</span>
+                  </div>
+                  <div class="size-h6 text-right" style="flex:0 0 auto">{{ .String "sync" }} · {{ .String "health" }} · {{ .String "revision" }}</div>
+                </div>
+              {{ end }}
+              </div>
+
+          - <<: *facts
+            title: Platform namespaces
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "platform" }}
+                <div class="flex items-center" style="gap:10px">
+                  <span class="{{ if .Bool "healthy" }}color-positive{{ else }}color-negative{{ end }}">●</span>
+                  <div style="flex:1 1 auto;min-width:0"><span class="size-h5 color-highlight">{{ .String "name" }}</span> <span class="size-h6 color-subdue">{{ .Int "ready" }}/{{ .Int "desired" }}{{ if gt (.Int "restarts") 0 }} · {{ .Int "restarts" }} restarts{{ end }}</span></div>
+                  <div class="size-h6 text-right" style="flex:0 0 auto">{{ range .Array "links" }}<a class="color-primary" href="{{ .String "url" }}" target="_blank" rel="noreferrer">{{ .String "label" }}</a>&nbsp;&nbsp;{{ end }}</div>
+                </div>
+              {{ end }}
+              </div>
+
+      - size: small
+        widgets:
+          - <<: *facts
+            title: Ingresses
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "ingresses" }}
+                <div class="flex justify-between size-h6"><a class="color-primary text-truncate" href="{{ .String "url" }}" target="_blank" rel="noreferrer">{{ .String "host" }}</a><span class="color-subdue">{{ .String "class" }}</span></div>
+              {{ end }}
+              </div>
+
+          - <<: *facts
+            title: LoadBalancer addresses
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "loadBalancers" }}
+                <div class="flex justify-between size-h6"><span class="text-truncate">{{ .String "namespace" }}/{{ .String "name" }}</span><a class="color-primary" href="{{ .String "url" }}" target="_blank" rel="noreferrer">{{ .String "ip" }}:{{ .Int "port" }}</a></div>
+              {{ end }}
+              </div>

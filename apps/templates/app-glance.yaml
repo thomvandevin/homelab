@@ -1,0 +1,188 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: glance
+  labels:
+    name: glance
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: glance-facts
+  namespace: glance
+---
+# Read-only view of what the dashboard shows; facts.jq is the only consumer.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: glance-facts
+rules:
+  - apiGroups: [""]
+    resources: [nodes, pods, services, persistentvolumeclaims]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [cloudflare-tunnel]
+    verbs: [get]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, daemonsets]
+    verbs: [get, list]
+  - apiGroups: [batch]
+    resources: [cronjobs, jobs]
+    verbs: [get, list]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list]
+  - apiGroups: [metrics.k8s.io]
+    resources: [nodes, pods]
+    verbs: [get, list]
+  - apiGroups: [longhorn.io]
+    resources: [volumes, nodes, replicas]
+    verbs: [get, list]
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: glance-facts
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: glance-facts
+subjects:
+  - kind: ServiceAccount
+    name: glance-facts
+    namespace: glance
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glance-config
+  namespace: glance
+data:
+  # Glance has its own Go templating, so the files are included verbatim rather
+  # than rendered by Helm. The GitLab page is a list continuation of `pages`, appended
+  # only when a token is configured.
+  glance.yml: |
+{{ .Files.Get "files/glance/glance.yml" | indent 4 }}
+{{- if (default dict .Values.glance).gitlab_token }}
+{{ .Files.Get "files/glance/glance-gitlab.yml" | indent 4 }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glance-facts
+  namespace: glance
+data:
+  facts.sh: |
+{{ .Files.Get "files/glance/facts.sh" | indent 4 }}
+  facts.jq: |
+{{ .Files.Get "files/glance/facts.jq" | indent 4 }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: glance-secrets
+  namespace: glance
+data:
+  gitlab-token: {{ (default dict .Values.glance).gitlab_token | default "" | b64enc | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glance
+  namespace: glance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: glance
+  template:
+    metadata:
+      labels:
+        app: glance
+      annotations:
+        checksum/config: {{ print (.Files.Get "files/glance/glance.yml") (.Files.Get "files/glance/glance-gitlab.yml") (.Files.Get "files/glance/facts.jq") (.Files.Get "files/glance/facts.sh") | sha256sum }}
+    spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
+      serviceAccountName: glance-facts
+      containers:
+        - name: glance
+          image: glanceapp/glance:v0.8.6
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: TZ
+              value: Europe/Amsterdam
+            - name: GITLAB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: glance-secrets
+                  key: gitlab-token
+          volumeMounts:
+            - name: config
+              mountPath: /app/config/glance.yml
+              subPath: glance.yml
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            periodSeconds: 10
+        - name: facts
+          image: alpine/k8s:1.36.5
+          command: [sh, /facts/facts.sh]
+          ports:
+            - containerPort: 8081
+              name: facts
+          volumeMounts:
+            - name: facts
+              mountPath: /facts
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: config
+          configMap:
+            name: glance-config
+        - name: facts
+          configMap:
+            name: glance-facts
+        - name: data
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+---
+# A tailnet device named "homelab", so the dashboard answers on http://homelab/
+# just like the media box does.
+apiVersion: v1
+kind: Service
+metadata:
+  name: glance
+  namespace: glance
+  annotations:
+    tailscale.com/hostname: homelab
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app: glance
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
