@@ -223,7 +223,10 @@ spec:
                       key: admin-token
               command: ["/bin/sh", "-c"]
               args:
-                - curl -fsS -X POST -H "X-Admin-Token: $ADMIN_TOKEN" "http://pokemon-api.pokemon-api.svc.cluster.local:8080/admin/sync/rulings?mode=recent"
+                - >-
+                  curl -fsS -X POST -H "X-Admin-Token: $ADMIN_TOKEN"
+                  "http://pokemon-api.pokemon-api.svc.cluster.local:8080/admin/sync/rulings?mode=recent"
+                  | grep -q '"started":true'
               resources:
                 requests:
                   cpu: 50m
@@ -259,7 +262,10 @@ spec:
                       key: admin-token
               command: ["/bin/sh", "-c"]
               args:
-                - curl -fsS -X POST -H "X-Admin-Token: $ADMIN_TOKEN" "http://pokemon-api.pokemon-api.svc.cluster.local:8080/admin/sync/rulings?mode=full"
+                - >-
+                  curl -fsS -X POST -H "X-Admin-Token: $ADMIN_TOKEN"
+                  "http://pokemon-api.pokemon-api.svc.cluster.local:8080/admin/sync/rulings?mode=full"
+                  | grep -q '"started":true'
               resources:
                 requests:
                   cpu: 50m
