@@ -154,7 +154,7 @@ spec:
                 # CI jobs never run on the control plane; a job waits for a worker
                 # (poll_timeout) rather than landing next to etcd
                 [runners.kubernetes.node_selector]
-                  "node-role.kubernetes.io/worker" = "true"
+                  "thomvandev.in/role" = "worker"
                 [[runners.kubernetes.volumes.config_map]]
                   name = "maven-proxy-settings"
                   mount_path = "/etc/maven-proxy"
