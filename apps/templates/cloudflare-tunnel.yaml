@@ -63,9 +63,6 @@ spec:
             # Pokemon AI
             - hostname: pokemon-ai.thomvandev.in
               service: http://chat-ui.pokemon-ai.svc.cluster.local:80
-            # G Block Showcase
-            - hostname: gblock.thomvandev.in
-              service: http://showcase-ui.pokemon-ai.svc.cluster.local:80
             # Decklist
             # /preload and /cleanup are unauthenticated admin routes: one
             # triggers a full scrape of Limitless, the other deletes cache
