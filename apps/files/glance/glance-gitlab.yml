@@ -49,17 +49,31 @@
           - type: custom-api
             title: Open merge requests
             cache: 5m
-            url: https://gitlab.com/api/v4/merge_requests
+            url: https://gitlab.com/api/v4/groups/thomvandevin-projects/merge_requests
             parameters:
               state: opened
-              scope: all
               per_page: 30
             headers:
               PRIVATE-TOKEN: ${GITLAB_TOKEN}
+            subrequests:
+              swiss:
+                url: https://gitlab.com/api/v4/groups/swiss-rounds/merge_requests
+                parameters:
+                  state: opened
+                  per_page: 30
+                headers:
+                  PRIVATE-TOKEN: ${GITLAB_TOKEN}
             template: |
-              {{ if eq (len (.JSON.Array "")) 0 }}<div class="size-h6 color-subdue">None</div>{{ end }}
+              {{ $swiss := .Subrequest "swiss" }}
+              {{ if and (eq (len (.JSON.Array "")) 0) (eq (len ($swiss.JSON.Array "")) 0) }}<div class="size-h6 color-subdue">None</div>{{ end }}
               <div class="list list-gap-10">
               {{ range .JSON.Array "" }}
+                <div>
+                  <a class="size-h5 color-highlight text-truncate block" href="{{ .String "web_url" }}" target="_blank" rel="noreferrer">{{ .String "title" }}</a>
+                  <div class="size-h6 color-subdue">{{ .String "references.full" }} · {{ .String "author.username" }} · <span {{ .String "updated_at" | parseTime "rfc3339" | toRelativeTime }}></span>{{ if .Bool "draft" }} · draft{{ end }}</div>
+                </div>
+              {{ end }}
+              {{ range $swiss.JSON.Array "" }}
                 <div>
                   <a class="size-h5 color-highlight text-truncate block" href="{{ .String "web_url" }}" target="_blank" rel="noreferrer">{{ .String "title" }}</a>
                   <div class="size-h6 color-subdue">{{ .String "references.full" }} · {{ .String "author.username" }} · <span {{ .String "updated_at" | parseTime "rfc3339" | toRelativeTime }}></span>{{ if .Bool "draft" }} · draft{{ end }}</div>
