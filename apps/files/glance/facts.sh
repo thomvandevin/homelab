@@ -1,12 +1,11 @@
 #!/bin/sh
-# Reads the cluster every INTERVAL seconds and serves one facts.json for Glance.
+# Reads the cluster every INTERVAL seconds and writes one facts.json for Glance;
+# the facts-http container serves it.
 set -u
 INTERVAL="${INTERVAL:-30}"
 WORK=/tmp/facts
 OUT=/data
 mkdir -p "$WORK" "$OUT"
-
-httpd -p 8081 -h "$OUT"
 
 while true; do
   cd "$WORK" || exit 1

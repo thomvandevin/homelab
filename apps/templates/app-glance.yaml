@@ -142,9 +142,6 @@ spec:
         - name: facts
           image: alpine/k8s:1.36.5
           command: [sh, /facts/facts.sh]
-          ports:
-            - containerPort: 8081
-              name: facts
           volumeMounts:
             - name: facts
               mountPath: /facts
@@ -156,6 +153,21 @@ spec:
               memory: 64Mi
             limits:
               memory: 256Mi
+        - name: facts-http
+          image: busybox:1.37.0
+          command: [httpd, -f, -p, "8081", -h, /data]
+          ports:
+            - containerPort: 8081
+              name: facts
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              memory: 32Mi
       volumes:
         - name: config
           configMap:
