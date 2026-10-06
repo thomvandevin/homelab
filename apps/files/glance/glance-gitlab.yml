@@ -12,11 +12,11 @@
               Authorization: Bearer ${GITLAB_TOKEN}
             body:
               query: >-
-                { own: group(fullPath: "thomvandevin-projects") { projects(includeSubgroups: true, first: 40, sort: LATEST_ACTIVITY_DESC) { nodes { name webUrl lastActivityAt pipelines(first: 1) { nodes { status finishedAt ref duration path } } } } }
-                  swiss: group(fullPath: "swiss-rounds") { projects(first: 10, sort: LATEST_ACTIVITY_DESC) { nodes { name webUrl lastActivityAt pipelines(first: 1) { nodes { status finishedAt ref duration path } } } } } }
+                { own: group(fullPath: "thomvandevin-projects") { projects(includeSubgroups: true, first: 40) { nodes { name webUrl lastActivityAt pipelines(first: 1) { nodes { status finishedAt ref duration path } } } } }
+                  swiss: group(fullPath: "swiss-rounds") { projects(first: 10) { nodes { name webUrl lastActivityAt pipelines(first: 1) { nodes { status finishedAt ref duration path } } } } } }
             template: |
               <div class="list list-gap-10">
-              {{ range .JSON.Array "data.own.projects.nodes" }}
+              {{ range sortByTime "lastActivityAt" "rfc3339" "desc" (.JSON.Array "data.own.projects.nodes") }}
                 {{ $status := .String "pipelines.nodes.0.status" }}
                 <div class="flex items-center" style="gap:10px">
                   <span class="{{ if eq $status "SUCCESS" }}color-positive{{ else if or (eq $status "RUNNING") (eq $status "PENDING") }}color-primary{{ else if eq $status "" }}color-subdue{{ else }}color-negative{{ end }}">●</span>
@@ -29,7 +29,7 @@
                   </div>
                 </div>
               {{ end }}
-              {{ range .JSON.Array "data.swiss.projects.nodes" }}
+              {{ range sortByTime "lastActivityAt" "rfc3339" "desc" (.JSON.Array "data.swiss.projects.nodes") }}
                 {{ $status := .String "pipelines.nodes.0.status" }}
                 <div class="flex items-center" style="gap:10px">
                   <span class="{{ if eq $status "SUCCESS" }}color-positive{{ else if or (eq $status "RUNNING") (eq $status "PENDING") }}color-primary{{ else if eq $status "" }}color-subdue{{ else }}color-negative{{ end }}">●</span>
