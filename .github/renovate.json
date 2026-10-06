@@ -55,6 +55,16 @@
         "major"
       ],
       "automerge": false
+    },
+    {
+      "description": "UniFi only supports MongoDB up to 8.0 - never propose a major",
+      "matchPackageNames": [
+        "mongo"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
     }
   ],
   "argocd": {
