@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    glance/icon: mdi:spider
   name: scraper
   labels:
     name: scraper

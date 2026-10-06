@@ -5,6 +5,7 @@ metadata:
   labels:
     name: slowpoke-bingo
   annotations:
+    glance/icon: mdi:dice-multiple
     argocd.argoproj.io/sync-wave: "0"
 ---
 # -- RBAC for GitLab runner deploy step ----------------------------------------

@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    glance/icon: mdi:robot
   name: pokemon-bot
   labels:
     name: pokemon-bot

@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    glance/icon: mdi:cards
   name: limitless-tournament-decks
   labels:
     name: limitless-tournament-decks

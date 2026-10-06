@@ -18,6 +18,18 @@ def age: if . == null then "" else
      elif $s >= 3600 then "\($s / 3600 | floor)h"
      else "\($s / 60 | floor)m" end) end;
 
+# "glance/icon" annotations use the same prefixes as Glance's own icon fields.
+def icon_url:
+  if . == null then null
+  elif startswith("di:") then "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/\(.[3:]).svg"
+  elif startswith("sh:") then "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/\(.[3:]).svg"
+  elif startswith("si:") then "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/\(.[3:]).svg"
+  elif startswith("mdi:") then "https://cdn.jsdelivr.net/npm/@mdi/svg@latest/svg/\(.[4:]).svg"
+  else . end;
+def icon_invert: . != null and (startswith("si:") or startswith("mdi:"));
+# namespaces nothing in the repo declares
+def fallback_icons: {"kube-system": "di:kubernetes", "default": "di:github"};
+
 def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cert-manager",
   "tailscale", "cloudflare-tunnel", "argocd", "glance", "nginx-system",
   "actions-runner-controller", "gitlab-runner", "gitlab-runner-swiss-rounds", "default", "echo"];
@@ -33,6 +45,8 @@ def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cer
     revision: (.status.sync.revision // "" | .[0:7]),
     source: (.spec.source.chart // (.spec.source.repoURL | sub("^.*/"; "")))
   })) as $argoApps
+| ($argo[0].items | map({key: .spec.destination.namespace, value: .metadata.annotations["glance/icon"]}) | map(select(.value != null)) | from_entries) as $argoIcons
+| ($namespaces[0].items | map({key: .metadata.name, value: .metadata.annotations["glance/icon"]}) | map(select(.value != null)) | from_entries) as $nsIcons
 # own apps have no Application of their own; their state is the state of their
 # resources inside the app-of-apps
 | ($argo[0].items | map(select(.metadata.name == "apps")) | .[0].status.resources // []) as $argoResources
@@ -80,15 +94,19 @@ def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cer
       restarts: ([$own[].status.containerStatuses[]?.restartCount] | sum),
       nodes: ([$own[].spec.nodeName] | unique | map(select(. != null)) | map(sub("^homelab-"; "")) | join(",")),
       age: (.metadata.creationTimestamp | age),
-      url: (.metadata.annotations["thomvandev.in/url"] // null)
+      url: (.metadata.annotations["thomvandev.in/url"] // null),
+      icon: (.metadata.annotations["glance/icon"] // null)
     })) as $workloadRows
 | ($workloadRows | map(.namespace) | unique) as $namespaces
 | ($namespaces | map(
     . as $ns
     | ($workloadRows | map(select(.namespace == $ns))) as $wl
     | ($podItems | map(select(.metadata.namespace == $ns and .metadata.ownerReferences[0].kind != "Job"))) as $np
+    | ($nsIcons[$ns] // ($wl | map(.icon) | map(select(. != null)) | .[0]) // $argoIcons[$ns] // fallback_icons[$ns]) as $icon
     | {
       name: $ns,
+      icon: ($icon | icon_url),
+      iconInvert: ($icon | icon_invert),
       system: (system_namespaces | index($ns) != null),
       own: ($wl | any(.image | startswith("registry.gitlab.com/"))),
       ready: ($wl | map(.ready) | sum),

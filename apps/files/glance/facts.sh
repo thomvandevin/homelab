@@ -10,6 +10,7 @@ mkdir -p "$WORK" "$OUT"
 while true; do
   cd "$WORK" || exit 1
   kubectl get nodes -o json > nodes.json \
+    && kubectl get namespaces -o json > namespaces.json \
     && kubectl get pods -A -o json > pods.json \
     && kubectl get --raw /apis/metrics.k8s.io/v1beta1/nodes > nodemetrics.json \
     && kubectl get nodes.longhorn.io -n longhorn-system -o json > lhnodes.json \
@@ -22,7 +23,7 @@ while true; do
     && kubectl get svc -A -o json > svc.json \
     && kubectl get cm cloudflare-tunnel -n cloudflare-tunnel -o json > tunnel.json \
     && jq -n -f /facts/facts.jq \
-         --slurpfile nodes nodes.json --slurpfile pods pods.json \
+         --slurpfile nodes nodes.json --slurpfile namespaces namespaces.json --slurpfile pods pods.json \
          --slurpfile nodemetrics nodemetrics.json --slurpfile lhnodes lhnodes.json \
          --slurpfile lhvolumes lhvolumes.json --slurpfile lhreplicas lhreplicas.json \
          --slurpfile workloads workloads.json --slurpfile cronjobs cronjobs.json \

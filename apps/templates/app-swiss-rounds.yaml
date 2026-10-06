@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    glance/icon: mdi:tournament
   name: swiss-rounds
   labels:
     name: swiss-rounds

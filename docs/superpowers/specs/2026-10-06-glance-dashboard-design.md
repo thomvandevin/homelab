@@ -33,6 +33,7 @@ widgets show less than we can render ourselves.
 | Tailnet link | Ingress with class `tailscale`: `status.loadBalancer.ingress[0].hostname` | Tailscale operator fills the status |
 | LAN link | Service `type: LoadBalancer` with an IP in `status` | MetalLB |
 | Explicit link | annotation `thomvandev.in/url` on a Deployment | only for hostNetwork apps with no Service (UniFi) |
+| Icon | annotation `glance/icon` on the Namespace, a workload, or the ArgoCD Application; `di:`, `sh:`, `si:`, `mdi:` prefixes resolve to the icon CDNs Glance uses | every app |
 | App health | ArgoCD `Application` sync and health status | one Application per app |
 | Node cards | Nodes + `metrics.k8s.io` + sum of pod requests per node | |
 | Storage | Longhorn `volumes.longhorn.io`, `nodes.longhorn.io` | |

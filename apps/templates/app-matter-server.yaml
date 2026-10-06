@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    glance/icon: di:matter
   name: matter-server
   labels:
     name: matter-server

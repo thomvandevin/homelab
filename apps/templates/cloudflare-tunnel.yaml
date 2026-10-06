@@ -10,6 +10,8 @@ data:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  annotations:
+    glance/icon: di:cloudflare
   name: cloudflare-tunnel
   namespace: argocd
 spec:
