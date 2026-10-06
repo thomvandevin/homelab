@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pokemon-api
+---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pokemon-api-deployer
+  namespace: pokemon-api
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-pokemon-api-deploy
+  namespace: pokemon-api
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: pokemon-api-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# -- Secrets -------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-secret
+  namespace: pokemon-api
+data:
+  password: {{ .Values.db.password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: api-secret
+  namespace: pokemon-api
+data:
+  admin-token: {{ .Values.pokemon_api.admin_token | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: pokemon-api
+data:
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
+---
+# -- pokemon-api ---------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pokemon-api
+  namespace: pokemon-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pokemon-api
+  template:
+    metadata:
+      labels:
+        app: pokemon-api
+    spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      initContainers:
+        - name: create-db
+          image: postgres:17-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgresql.db-system.svc.cluster.local -p 5432; do sleep 2; done
+              PGPASSWORD=$DB_PASSWORD psql -h postgresql.db-system.svc.cluster.local -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'pokemon_api'" | grep -q 1 || PGPASSWORD=$DB_PASSWORD psql -h postgresql.db-system.svc.cluster.local -U postgres -c "CREATE DATABASE pokemon_api"
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+      containers:
+        - name: pokemon-api
+          image: registry.gitlab.com/thomvandevin-projects/pokemon-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: postgresql.db-system.svc.cluster.local
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: pokemon_api
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: META_DB_HOST
+              value: postgresql.db-system.svc.cluster.local
+            - name: META_DB_PORT
+              value: "5432"
+            - name: META_DB_NAME
+              value: limitless_tournaments_db
+            - name: META_DB_USER
+              value: postgres
+            - name: META_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: admin-token
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pokemon-api
+  namespace: pokemon-api
+spec:
+  selector:
+    app: pokemon-api
+  ports:
+    - port: 8080
+      targetPort: 8080
