@@ -106,7 +106,7 @@ spec:
       labels:
         app: glance
       annotations:
-        checksum/config: {{ print (.Files.Get "files/glance/glance.yml") (.Files.Get "files/glance/glance-gitlab.yml") (.Files.Get "files/glance/facts.jq") (.Files.Get "files/glance/facts.sh") | sha256sum }}
+        checksum/config: {{ print (.Files.Get "files/glance/glance.yml") (.Files.Get "files/glance/glance-gitlab.yml") (.Files.Get "files/glance/facts.jq") (.Files.Get "files/glance/facts.sh") (default dict .Values.glance).gitlab_token | sha256sum }}
     spec:
       {{- include "placement.preferWorkers" . | nindent 6 }}
       serviceAccountName: glance-facts
