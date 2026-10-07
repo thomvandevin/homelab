@@ -68,6 +68,8 @@ spec:
     metadata:
       labels:
         app: workspace
+      annotations:
+        checksum/config: {{ print .Values.workspace.repos .Values.workspace.authorizedKeys | sha256sum }}
     spec:
       {{- include "placement.workersOnly" . | nindent 6 }}
       serviceAccountName: workspace
@@ -75,6 +77,9 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+        # Only fix ownership when the volume root is wrong: the default policy
+        # walks and re-modes the whole home on every start
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: workspace
           image: ghcr.io/thomvandevin/workspace:latest
@@ -99,8 +104,8 @@ spec:
             limits:
               memory: 8Gi
           livenessProbe:
-            tcpSocket:
-              port: ssh
+            exec:
+              command: [pgrep, -x, sshd]
             initialDelaySeconds: 60
             periodSeconds: 30
           volumeMounts:
@@ -118,9 +123,31 @@ spec:
         name: home
       spec:
         accessModes: ["ReadWriteOnce"]
+        storageClassName: longhorn
         resources:
           requests:
             storage: 50Gi
+---
+# code-server has no auth of its own and the pod holds cluster-admin, so only
+# the Tailscale operator's proxies may reach it
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: workspace
+  namespace: workspace
+spec:
+  podSelector:
+    matchLabels:
+      app: workspace
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tailscale
+      ports:
+        - port: 2222
+        - port: 8080
 ---
 # A tailnet device named "workspace": `ssh dev@workspace` and VS Code Remote-SSH
 apiVersion: v1
