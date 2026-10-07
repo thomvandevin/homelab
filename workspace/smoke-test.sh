@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Builds the image and boots it twice against the same home volume:
-# first boot proves ssh, code-server, the tmux windows, the clone and the
-# restart loop; second boot proves nothing on the volume is regenerated.
+# Builds the image and boots it three times against the same home volume:
+# offline first (sshd must come up without the Claude installer or any host
+# key scan), then online (tools, code-server, tmux windows, clone, restart
+# loop), then after a kubelet-style fsGroup walk over the volume (keys keep
+# working, nothing is regenerated or clobbered).
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -10,6 +12,7 @@ image=workspace:dev
 name=workspace-smoke
 volume=workspace-smoke-home
 config=workspace-smoke-config
+sa=workspace-smoke-sa
 ssh_port=${SSH_PORT:-2222}
 http_port=${HTTP_PORT:-8080}
 
@@ -20,9 +23,9 @@ fail() {
 }
 
 cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
-trap 'cleanup; docker volume rm "$volume" "$config" >/dev/null 2>&1 || true' EXIT
+trap 'cleanup; docker volume rm "$volume" "$config" "$sa" >/dev/null 2>&1 || true' EXIT
 cleanup
-docker volume rm "$volume" "$config" >/dev/null 2>&1 || true
+docker volume rm "$volume" "$config" "$sa" >/dev/null 2>&1 || true
 
 # Docker Desktop only bind-mounts shared paths, so the config goes in through
 # a volume filled over stdin
@@ -32,11 +35,14 @@ docker run --rm -i -v "$config:/etc/workspace" debian:bookworm-slim \
   sh -c 'cat > /etc/workspace/authorized_keys' < "$scratch/testkey.pub"
 printf 'homelab=https://github.com/thomvandevin/homelab.git\n\n' | docker run --rm -i -v "$config:/etc/workspace" debian:bookworm-slim \
   sh -c 'cat > /etc/workspace/repos'
+# stands in for the projected ServiceAccount token Kubernetes mounts
+docker run --rm -v "$sa:/sa" debian:bookworm-slim sh -c 'echo fake-token > /sa/token; echo fake-ca > /sa/ca.crt'
 
 run() {
-  docker run -d --name "$name" -u 1000:1000 \
+  docker run -d --name "$name" -u 1000:1000 "$@" \
     -e GIT_USER_NAME=test -e GIT_USER_EMAIL=test@example.com \
-    -v "$volume:/home/dev" -v "$config:/etc/workspace:ro" \
+    -e GH_TOKEN=gh-test-token -e GITLAB_TOKEN=gl-test-token \
+    -v "$volume:/home/dev" -v "$config:/etc/workspace:ro" -v "$sa:/var/run/secrets/kubernetes.io/serviceaccount:ro" \
     -p "$ssh_port:2222" -p "$http_port:8080" "$image" >/dev/null
 }
 
@@ -55,10 +61,22 @@ remote() {
 
 docker build -q -t "$image" "$here" >/dev/null || fail "image build"
 
-echo "== first boot"
+echo "== offline boot"
+# --network none also drops port publishing, so this boot is checked from inside
+run --network none
+for _ in $(seq 1 30); do docker exec "$name" pgrep -x sshd >/dev/null 2>&1 && break; sleep 2; done
+docker exec "$name" pgrep -x sshd >/dev/null || fail "sshd not running without network"
+docker exec "$name" test ! -e /home/dev/.local/bin/claude || fail "claude present after an offline boot"
+docker exec "$name" grep -q "StrictHostKeyChecking accept-new" /home/dev/.ssh/config || fail "ssh client config missing accept-new"
+started=$(date +%s)
+docker stop -t 30 "$name" >/dev/null
+[ $(( $(date +%s) - started )) -lt 10 ] || fail "container ignored SIGTERM"
+cleanup
+
+echo "== online boot"
 run
 wait_for_ssh 60 || fail "sshd not reachable"
-docker logs "$name" | grep -q 'git public key: ssh-ed25519' || fail "public key not printed"
+grep -q 'git public key: ssh-ed25519' <<< "$(docker logs "$name" 2>&1)" || fail "public key not printed"
 
 tools=$(remote 'echo "kubectl $(kubectl version --client -o json | jq -r .clientVersion.gitVersion)";
   echo "helm $(helm version --short)"; echo "sops $(sops --version --disable-version-check)";
@@ -67,6 +85,10 @@ echo "$tools"
 for t in kubectl helm sops gh glab claude; do
   echo "$tools" | grep -qE "^$t .*[0-9]+\.[0-9]+\.[0-9]+" || fail "$t missing over ssh"
 done
+
+[ "$(remote 'kubectl config view -o jsonpath={.clusters[0].cluster.server}')" = "https://kubernetes.default.svc" ] || fail "kubeconfig not generated"
+[ "$(remote 'echo "$GH_TOKEN $GITLAB_TOKEN"')" = "gh-test-token gl-test-token" ] || fail "tokens not exported to ssh sessions"
+[ "$(remote 'jq .includeCoAuthoredBy .claude/settings.json')" = "false" ] || fail "attribution not disabled in claude settings"
 
 for _ in $(seq 1 30); do
   code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:$http_port/" || true)
@@ -92,12 +114,18 @@ done
 echo "$pane" | tail -5
 echo "$pane" | grep -q 'remote-control for homelab exited, restarting in 10s' || fail "rc-loop did not restart the server"
 
-echo "== second boot"
 key1=$(docker exec "$name" cat /home/dev/.ssh/id_ed25519.pub)
+docker exec "$name" sh -c 'echo "{\"custom\":true,\"includeCoAuthoredBy\":false}" > /home/dev/.claude/settings.json'
 cleanup
+
+echo "== boot after fsGroup walk"
+# kubelet applies mode|0660 to every file on a fsGroup volume at mount time
+docker run --rm -v "$volume:/home/dev" debian:bookworm-slim chmod -R g+rw /home/dev
 run
-wait_for_ssh 60 || fail "sshd not reachable after restart"
+wait_for_ssh 60 || fail "sshd not reachable after fsGroup walk"
 [ "$key1" = "$(docker exec "$name" cat /home/dev/.ssh/id_ed25519.pub)" ] || fail "git key regenerated"
-docker logs "$name" | grep -qi 'installing' && fail "claude reinstalled on second boot"
+[ "$(docker exec "$name" stat -c %a /home/dev/.ssh/id_ed25519)" = 600 ] || fail "git key left group-readable"
+grep -qi 'installing' <<< "$(docker logs "$name" 2>&1)" && fail "claude reinstalled after restart"
+[ "$(remote 'jq .custom .claude/settings.json')" = "true" ] || fail "claude settings clobbered"
 
 echo "PASS"

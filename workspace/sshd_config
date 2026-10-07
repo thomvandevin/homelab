@@ -12,5 +12,8 @@ StrictModes no
 # Non-interactive ssh commands (VS Code's probes, scripts) skip .profile,
 # so the Claude binary on the volume has to be on PATH here
 SetEnv PATH=/home/dev/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# ~/.ssh/environment is written by the entrypoint with the tokens and the
+# in-cluster API address
+PermitUserEnvironment yes
 AcceptEnv LANG LC_*
 Subsystem sftp internal-sftp
