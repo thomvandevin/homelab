@@ -48,6 +48,8 @@ metadata:
   namespace: pokemon-api
 data:
   admin-token: {{ .Values.pokemon_api.admin_token | b64enc | quote }}
+  portal-secret: {{ .Values.pokemon_api.portal_secret | default "" | b64enc | quote }}
+  admin-password-hash: {{ .Values.pokemon_api.admin_password_hash | default "" | b64enc | quote }}
 ---
 apiVersion: v1
 kind: Secret
@@ -130,6 +132,16 @@ spec:
                 secretKeyRef:
                   name: api-secret
                   key: admin-token
+            - name: PORTAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: portal-secret
+            - name: ADMIN_PASSWORD_HASH
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: admin-password-hash
           readinessProbe:
             httpGet:
               path: /v1/health
