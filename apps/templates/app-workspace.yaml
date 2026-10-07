@@ -53,6 +53,40 @@ data:
   GH_TOKEN: {{ .Values.workspace.githubToken | b64enc | quote }}
   GITLAB_TOKEN: {{ .Values.workspace.gitlabToken | b64enc | quote }}
 ---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: workspace
+data:
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
+---
+# -- RBAC for the manual GitLab deploy job -------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: workspace-deployer
+  namespace: workspace
+rules:
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-workspace-deploy
+  namespace: workspace
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: workspace-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -73,6 +107,8 @@ spec:
     spec:
       {{- include "placement.workersOnly" . | nindent 6 }}
       serviceAccountName: workspace
+      imagePullSecrets:
+        - name: gitlab-registry-secret
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
@@ -82,7 +118,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: workspace
-          image: ghcr.io/thomvandevin/workspace:latest
+          image: registry.gitlab.com/thomvandevin-projects/workspace:latest
           imagePullPolicy: Always
           ports:
             - name: ssh

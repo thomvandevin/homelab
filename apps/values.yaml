@@ -29,3 +29,4 @@ workspace:
     scraper: git@gitlab.com:thomvandevin-projects/scraper.git
     slowpoke-bingo: git@gitlab.com:thomvandevin-projects/slowpoke-bingo.git
     thomvandev.in: git@gitlab.com:thomvandevin-projects/thomvandev.in.git
+    workspace: git@gitlab.com:thomvandevin-projects/workspace.git
