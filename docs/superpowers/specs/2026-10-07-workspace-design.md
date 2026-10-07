@@ -16,14 +16,13 @@ every other app here.
 
 ## Approach
 
-One StatefulSet, one Longhorn volume as the home directory, two containers
-sharing it:
-
-- `workspace`: the tools image. Runs sshd and a tmux server with one window
-  per repo; each window loops `claude remote-control --name <repo>` inside
-  `~/Projects/<repo>`.
-- `code-server`: the upstream `codercom/code-server` image, same UID, same
-  home volume, no auth (only the tailnet reaches it).
+One StatefulSet, one Longhorn volume as the home directory, one container
+from our own tools image. It runs sshd, code-server (no auth of its own, only
+the tailnet reaches it) and a tmux server with one window per repo; each
+window loops `claude remote-control --name <repo>` inside `~/Projects/<repo>`.
+code-server lives in the same image rather than as a sidecar so its
+integrated terminal has the same tools, PATH and Claude binary as the
+sessions.
 
 Reachable on the tailnet as `workspace` (SSH, Tailscale LoadBalancer Service)
 and `code` (HTTPS, Tailscale Ingress), the same two patterns glance and the
@@ -67,7 +66,9 @@ From https://code.claude.com/docs/en/remote-control:
 
 Debian base, non-root user `dev` (uid 1000, home `/home/dev`). Tools: git,
 openssh-server, tmux, curl, jq, ripgrep, node (LTS), kubectl, helm, sops, age,
-gh, glab. No Claude Code binary: the entrypoint installs it with the native
+gh, glab, code-server. Tool versions are `ARG`s with `# renovate:` markers so
+Renovate bumps them like the argocd init-container tools. No Claude Code
+binary: the entrypoint installs it with the native
 installer into `~/.local` on first boot and it self-updates there, so Claude
 releases need no image rebuild.
 
@@ -85,7 +86,8 @@ current as it does for other images.
 2. Write `~/.ssh/authorized_keys` from the mounted ConfigMap.
 3. Install Claude Code if `~/.local/bin/claude` is missing.
 4. Configure git identity from env (`GIT_USER_NAME`, `GIT_USER_EMAIL`).
-5. Start sshd (port 2222, user `dev`, key-only).
+5. Start sshd (port 2222, user `dev`, key-only) and code-server (port 8080,
+   `--auth none`, opened on `~/Projects`).
 6. Start a detached tmux server; for every `NAME=URL` line in the mounted
    repos file open a window named `NAME` running `rc-loop NAME URL`.
 7. `wait` on the sshd process so PID 1 stays up; sshd stopping ends the
@@ -107,27 +109,23 @@ same way.
   per line, rendered from values).
 - Secret `workspace-secret`: `GH_TOKEN`, `GITLAB_TOKEN` from sops values, for
   `gh` and `glab` (PRs and MRs; clones and pushes go over SSH).
-- StatefulSet `workspace`, 1 replica, `placement.workersOnly`,
-  `securityContext.fsGroup: 1000`, `volumeClaimTemplates` for `home`
-  (Longhorn, 50Gi) mounted at `/home/dev` in both containers.
-  - `workspace` container: the image above; env from the Secret plus
-    `GIT_USER_NAME`, `GIT_USER_EMAIL`, `RC_SPAWN` from values; requests
-    500m / 2Gi, limit 6Gi memory; port 2222.
-  - `code-server` container: `codercom/code-server`, `--auth none
-    --bind-addr 0.0.0.0:8080 /home/dev/Projects`; port 8080; requests
-    250m / 512Mi, limit 2Gi.
+- StatefulSet `workspace`, 1 replica, `placement.workersOnly`, runs as uid
+  1000 with `fsGroup: 1000`, `volumeClaimTemplates` for `home` (Longhorn,
+  50Gi) mounted at `/home/dev`. One container from the image above; env from
+  the Secret plus `GIT_USER_NAME`, `GIT_USER_EMAIL`, `RC_SPAWN` from values;
+  requests 500m / 2Gi, limit 8Gi memory; ports 2222 and 8080.
 - Service `workspace` (`type: LoadBalancer`, `loadBalancerClass: tailscale`,
   `tailscale.com/hostname: workspace`) exposing port 22 to 2222.
 - Service `code` (ClusterIP, 8080) and Ingress `code`
   (`ingressClassName: tailscale`, host `code`) for HTTPS on the tailnet.
-- ArgoCD `Application` `workspace`, automated sync with prune.
+The root `apps` Application renders every file in `apps/templates`, so no
+per-app ArgoCD Application is needed.
 
 ### Values
 
 ```yaml
 workspace:
   gitUserName: Thom van de Vin
-  gitUserEmail: <email>
   spawn: same-dir          # or worktree for isolated parallel sessions
   authorizedKeys:
     - ssh-ed25519 ...
@@ -135,7 +133,8 @@ workspace:
     homelab: git@github.com:thomvandevin/homelab.git
 ```
 
-`secrets.yaml` gains `workspace.githubToken` and `workspace.gitlabToken`.
+`secrets.yaml` gains `workspace.gitUserEmail`, `workspace.githubToken` and
+`workspace.gitlabToken`; `values.yaml` holds the rest.
 
 ### One-time bootstrap (documented in `workspace/README.md`)
 
