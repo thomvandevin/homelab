@@ -195,3 +195,81 @@ spec:
                 limits:
                   cpu: 2000m
                   memory: 3Gi
+---
+# Compendium rulings sync: recent.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pokemon-api-rulings-recent
+  namespace: pokemon-api
+spec:
+  schedule: "10 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+              env:
+                - name: ADMIN_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: api-secret
+                      key: admin-token
+              command: ["/bin/sh", "-c"]
+              args:
+                - >-
+                  curl -fsS -X POST -H "X-Admin-Token: $ADMIN_TOKEN"
+                  "http://pokemon-api.pokemon-api.svc.cluster.local:8080/admin/sync/rulings?mode=recent"
+                  | grep -q '"started":true'
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+---
+# Compendium rulings sync: full.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pokemon-api-rulings-full
+  namespace: pokemon-api
+spec:
+  schedule: "30 4 1 * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: curl
+              image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+              env:
+                - name: ADMIN_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: api-secret
+                      key: admin-token
+              command: ["/bin/sh", "-c"]
+              args:
+                - >-
+                  curl -fsS -X POST -H "X-Admin-Token: $ADMIN_TOKEN"
+                  "http://pokemon-api.pokemon-api.svc.cluster.local:8080/admin/sync/rulings?mode=full"
+                  | grep -q '"started":true'
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
