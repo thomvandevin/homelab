@@ -62,23 +62,21 @@ From https://code.claude.com/docs/en/remote-control:
 
 ## Components
 
-### Image (`workspace/Dockerfile`, built by GitHub Actions)
+### Image (GitLab project `thomvandevin-projects/workspace`, private)
 
 Debian base, non-root user `dev` (uid 1000, home `/home/dev`). Tools: git,
 openssh-server, tmux, curl, jq, ripgrep, node (LTS), kubectl, helm, sops, age,
-gh, glab, code-server. Tool versions are `ARG`s with `# renovate:` markers so
-Renovate bumps them like the argocd init-container tools. No Claude Code
-binary: the entrypoint installs it with the native
-installer into `~/.local` on first boot and it self-updates there, so Claude
-releases need no image rebuild.
+gh, glab, code-server. Tool versions are `ARG`s with `# renovate:` markers,
+bumped by the group's self-hosted Renovate. No Claude Code binary: the
+entrypoint installs it with the native installer into `~/.local` on first
+boot and it self-updates there, so Claude releases need no image rebuild.
 
-Built on `ubuntu-latest` by `.github/workflows/build-workspace.yaml` on
-pushes touching `workspace/**`, pushed to `ghcr.io/thomvandevin/workspace`
-tagged `latest` and by commit SHA. The package is set public once by hand so
-the cluster pulls without a secret. Renovate keeps the base image digest
-current as it does for other images.
+Built with Kaniko on the homelab runner on every push to `main`, pushed to
+`registry.gitlab.com/thomvandevin-projects/workspace:latest`, pulled with the
+shared `gitlab-registry-secret`, like the other own images. The deploy job is
+manual because a restart interrupts running sessions.
 
-### Entrypoint (`workspace/entrypoint.sh`)
+### Entrypoint (`entrypoint.sh`)
 
 1. Generate SSH host keys into `~/.ssh/host/` and a client key
    `~/.ssh/id_ed25519` if missing; print the public key to the log so it can
@@ -136,7 +134,7 @@ workspace:
 `secrets.yaml` gains `workspace.gitUserEmail`, `workspace.githubToken` and
 `workspace.gitlabToken`; `values.yaml` holds the rest.
 
-### One-time bootstrap (documented in `workspace/README.md`)
+### One-time bootstrap (documented in the workspace project README)
 
 1. `kubectl -n workspace logs workspace-0 -c workspace`: copy the printed
    public key into GitLab and GitHub.
