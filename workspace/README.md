@@ -7,6 +7,11 @@ and `code` (code-server over HTTPS).
 
 ## One-time bootstrap
 
+0. Before merging: set `workspace.gitUserEmail`, `githubToken` (PRs via `gh`)
+   and `gitlabToken` (MRs via `glab`) in `apps/secrets.yaml.dec`, re-encrypt,
+   and list the repos under `workspace.repos` in `apps/values.yaml`. After the
+   first image build, make the `workspace` package public on GitHub so the
+   cluster can pull it.
 1. Register the pod's git key with GitLab and GitHub:
    ```bash
    kubectl -n workspace logs workspace-0 | grep 'git public key'
@@ -21,10 +26,13 @@ and `code` (code-server over HTTPS).
    kubectl -n workspace exec -it workspace-0 -- tmux attach
    ```
    Switch windows with `Ctrl-b n`. Each window then shows its session URL.
-4. Copy the sops age key so sessions can edit `apps/secrets.yaml`:
+4. Copy the sops age key so sessions can edit `apps/secrets.yaml`, and the
+   global Claude instructions (the pod already seeds
+   `includeCoAuthoredBy: false` in `~/.claude/settings.json`):
    ```bash
    ssh dev@workspace 'mkdir -p ~/.config/sops/age'
    scp key.txt dev@workspace:~/.config/sops/age/keys.txt
+   scp ~/.claude/CLAUDE.md dev@workspace:~/.claude/CLAUDE.md
    ```
 
 Everything above lives on the `home` volume; pod restarts need none of it.
