@@ -193,5 +193,21 @@ def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cer
       | sort_by(.phase)),
     arc: ($podItems | map(select(.metadata.namespace == "default" and .metadata.labels["runner-deployment-name"] != null))
       | map({name: .metadata.labels["runner-deployment-name"], phase: .status.phase, node: (.spec.nodeName // "" | sub("^homelab-"; "")), age: (.metadata.creationTimestamp | age)}))
-  }
+  },
+  # The workspace StatefulSet is OnDelete: a revision mismatch means a change
+  # is waiting for the next idle-guarded deploy
+  workspace: (
+    ($podItems | map(select(.metadata.namespace == "workspace" and .metadata.name == "workspace-0")) | .[0]) as $p
+    | ($wlItems | map(select(.kind == "StatefulSet" and .metadata.namespace == "workspace" and .metadata.name == "workspace")) | .[0]) as $ss
+    | if $p == null then {present: false} else {
+        present: true,
+        ready: ($p.status.containerStatuses[0].ready // false),
+        node: ($p.spec.nodeName // ""),
+        age: ($p.metadata.creationTimestamp | age),
+        restarts: ([$p.status.containerStatuses[]?.restartCount] | sum),
+        digest: ($p.status.containerStatuses[0].imageID // "" | sub("^.*@"; "")),
+        memGi: ($wsmetrics[0].items | map(select(.metadata.name == "workspace-0")) | .[0].containers // [] | map(.usage.memory | q) | sum | gi | r1),
+        memLimitGi: ($p.spec.containers[0].resources.limits.memory | q | gi | r1),
+        pendingRestart: ($ss != null and $ss.status.currentRevision != $ss.status.updateRevision)
+      } end)
 }
