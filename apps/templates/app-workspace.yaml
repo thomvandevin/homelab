@@ -1,0 +1,177 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    glance/icon: mdi:console
+  name: workspace
+  labels:
+    name: workspace
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: workspace
+  namespace: workspace
+---
+# The workspace replaces the laptop's kubeconfig, so it gets the same reach
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: workspace-cluster-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: workspace
+    namespace: workspace
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workspace-config
+  namespace: workspace
+data:
+  authorized_keys: |
+    {{- range .Values.workspace.authorizedKeys }}
+    {{ . }}
+    {{- end }}
+  repos: |
+    {{- range $name, $url := .Values.workspace.repos }}
+    {{ $name }}={{ $url }}
+    {{- end }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: workspace-secret
+  namespace: workspace
+data:
+  GIT_USER_EMAIL: {{ .Values.workspace.gitUserEmail | b64enc | quote }}
+  GH_TOKEN: {{ .Values.workspace.githubToken | b64enc | quote }}
+  GITLAB_TOKEN: {{ .Values.workspace.gitlabToken | b64enc | quote }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: workspace
+  namespace: workspace
+spec:
+  serviceName: workspace
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workspace
+  template:
+    metadata:
+      labels:
+        app: workspace
+    spec:
+      {{- include "placement.workersOnly" . | nindent 6 }}
+      serviceAccountName: workspace
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: workspace
+          image: ghcr.io/thomvandevin/workspace:latest
+          imagePullPolicy: Always
+          ports:
+            - name: ssh
+              containerPort: 2222
+            - name: http
+              containerPort: 8080
+          env:
+            - name: GIT_USER_NAME
+              value: {{ .Values.workspace.gitUserName | quote }}
+            - name: RC_SPAWN
+              value: {{ .Values.workspace.spawn | quote }}
+          envFrom:
+            - secretRef:
+                name: workspace-secret
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              memory: 8Gi
+          livenessProbe:
+            tcpSocket:
+              port: ssh
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          volumeMounts:
+            - name: home
+              mountPath: /home/dev
+            - name: config
+              mountPath: /etc/workspace
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: workspace-config
+  volumeClaimTemplates:
+    - metadata:
+        name: home
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 50Gi
+---
+# A tailnet device named "workspace": `ssh dev@workspace` and VS Code Remote-SSH
+apiVersion: v1
+kind: Service
+metadata:
+  name: workspace
+  namespace: workspace
+  annotations:
+    tailscale.com/hostname: workspace
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app: workspace
+  ports:
+    - name: ssh
+      port: 22
+      targetPort: ssh
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code
+  namespace: workspace
+spec:
+  type: ClusterIP
+  selector:
+    app: workspace
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# -- Tailscale Ingress (internal only) ----------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: code
+  namespace: workspace
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: code
+                port:
+                  number: 80
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - code
