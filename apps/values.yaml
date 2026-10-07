@@ -7,9 +7,10 @@ prometheus:
 
 workspace:
   gitUserName: Thom van de Vin
-  # same-dir shares one checkout per repo; worktree gives every session
-  # started from claude.ai its own git worktree
-  spawn: same-dir
+  # worktree gives every session started from claude.ai its own git worktree,
+  # so parallel sessions in a repo cannot overwrite each other; same-dir shares
+  # one checkout. Applied at the next idle-guarded restart.
+  spawn: worktree
   authorizedKeys:
     - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL0dyepv7Mynvj4EqLWfM0DtAz20ZI8+AfU/qhHiAsXP thomvandevin@thomvandevin-macbook.local
     - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBR653yMYwe9MQkwYTR0QUQu1cFAcgzxKIGqd6iIlz1o tvandevin@LMAC-N6CFJ7CWGC
