@@ -62,16 +62,19 @@ metadata:
 data:
   .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
 ---
-# -- RBAC for the manual GitLab deploy job -------------------------------------
+# -- RBAC for the GitLab deploy job: idle check, then pod delete ---------------
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: workspace-deployer
   namespace: workspace
 rules:
-  - apiGroups: ["apps"]
-    resources: ["statefulsets"]
-    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -95,6 +98,10 @@ metadata:
 spec:
   serviceName: workspace
   replicas: 1
+  # Restarting interrupts running Claude sessions, so changes only apply when
+  # the workspace project's deploy job deletes the pod once sessions are idle
+  updateStrategy:
+    type: OnDelete
   selector:
     matchLabels:
       app: workspace
@@ -102,8 +109,6 @@ spec:
     metadata:
       labels:
         app: workspace
-      annotations:
-        checksum/config: {{ print .Values.workspace.repos .Values.workspace.authorizedKeys | sha256sum }}
     spec:
       {{- include "placement.workersOnly" . | nindent 6 }}
       serviceAccountName: workspace
