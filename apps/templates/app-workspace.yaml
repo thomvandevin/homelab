@@ -41,6 +41,14 @@ data:
     {{- range $name, $url := .Values.workspace.repos }}
     {{ $name }}={{ $url }}
     {{- end }}
+  marketplaces: |
+    {{- range $name, $source := .Values.workspace.marketplaces }}
+    {{ $name }}={{ $source }}
+    {{- end }}
+  plugins: |
+    {{- range .Values.workspace.plugins }}
+    {{ . }}
+    {{- end }}
 ---
 apiVersion: v1
 kind: Secret
