@@ -30,3 +30,29 @@ workspace:
     slowpoke-bingo: git@gitlab.com:thomvandevin-projects/slowpoke-bingo.git
     thomvandev.in: git@gitlab.com:thomvandevin-projects/thomvandev.in.git
     workspace: git@gitlab.com:thomvandevin-projects/workspace.git
+  # Installed in the workspace when missing (never uninstalled); the key must
+  # match the name in the marketplace's own manifest
+  marketplaces:
+    claude-plugins-official: anthropics/claude-plugins-official
+    claude-code-plugins: anthropics/claude-code
+    superpowers-dev: https://github.com/obra/superpowers.git
+    ponytail: DietrichGebert/ponytail
+  plugins:
+    - superpowers@claude-plugins-official
+    - superpowers@superpowers-dev
+    - ponytail@ponytail
+    - atomic-agents@claude-plugins-official
+    - claude-md-management@claude-plugins-official
+    - cloudflare@claude-plugins-official
+    - code-review@claude-plugins-official
+    - code-simplifier@claude-plugins-official
+    - context7@claude-plugins-official
+    - feature-dev@claude-plugins-official
+    - frontend-design@claude-code-plugins
+    - frontend-design@claude-plugins-official
+    - gitlab@claude-plugins-official
+    - kotlin-lsp@claude-plugins-official
+    - mcp-tunnels@claude-plugins-official
+    - playwright@claude-plugins-official
+    - redis-development@claude-plugins-official
+    - typescript-lsp@claude-plugins-official
