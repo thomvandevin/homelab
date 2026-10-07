@@ -96,6 +96,19 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s*\\n\\s*- name: \\S+\\s*\\n\\s*value: \"(?<currentValue>[^\"]+)\""
       ]
+    },
+    {
+      "description": "Tool versions baked into the workspace image",
+      "customType": "regex",
+      "datasourceTemplate": "{{{datasource}}}",
+      "depNameTemplate": "{{{depName}}}",
+      "extractVersionTemplate": "^v?(?<version>.+)$",
+      "managerFilePatterns": [
+        "/^workspace/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s*\\nARG \\S+=(?<currentValue>\\S+)"
+      ]
     }
   ]
 }

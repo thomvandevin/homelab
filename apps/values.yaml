@@ -4,3 +4,28 @@
 # postgres-exporter keep applying cleanly while the stack is disabled.
 prometheus:
   enabled: false
+
+workspace:
+  gitUserName: Thom van de Vin
+  # same-dir shares one checkout per repo; worktree gives every session
+  # started from claude.ai its own git worktree
+  spawn: same-dir
+  authorizedKeys:
+    - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL0dyepv7Mynvj4EqLWfM0DtAz20ZI8+AfU/qhHiAsXP thomvandevin@thomvandevin-macbook.local
+    - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBR653yMYwe9MQkwYTR0QUQu1cFAcgzxKIGqd6iIlz1o tvandevin@LMAC-N6CFJ7CWGC
+  repos:
+    homelab: git@github.com:thomvandevin/homelab.git
+    homelab-media: git@github.com:thomvandevin/homelab-media.git
+    dialoguearr: git@github.com:thomvandevin/dialoguearr.git
+    swiss-rounds: git@gitlab.com:swiss-rounds/swiss-rounds.git
+    closet: git@gitlab.com:thomvandevin-projects/closet.git
+    limitless-tournament-decks: git@gitlab.com:thomvandevin-projects/limitless-tournament-decks.git
+    pokemon-ai: git@gitlab.com:thomvandevin-projects/pokemon-ai.git
+    pokemon-api: git@gitlab.com:thomvandevin-projects/pokemon-api.git
+    pokemon-bot: git@gitlab.com:thomvandevin-projects/pokemon-bot.git
+    pokemon-cardmarket-extension: git@gitlab.com:thomvandevin-projects/pokemon-cardmarket-extension.git
+    pokemon-index: git@gitlab.com:thomvandevin-projects/pokemon-index.git
+    rotom-ui: git@gitlab.com:thomvandevin-projects/rotom-ui.git
+    scraper: git@gitlab.com:thomvandevin-projects/scraper.git
+    slowpoke-bingo: git@gitlab.com:thomvandevin-projects/slowpoke-bingo.git
+    thomvandev.in: git@gitlab.com:thomvandevin-projects/thomvandev.in.git

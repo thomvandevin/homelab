@@ -1,0 +1,19 @@
+Port 2222
+HostKey /home/dev/.ssh/host/ssh_host_ed25519_key
+PidFile /home/dev/.ssh/host/sshd.pid
+AuthorizedKeysFile /home/dev/.ssh/authorized_keys
+AllowUsers dev
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+UsePAM no
+# The home volume is owned through fsGroup, which leaves it group-writable;
+# sshd's default mode check would reject the key for that alone
+StrictModes no
+# Non-interactive ssh commands (VS Code's probes, scripts) skip .profile,
+# so the Claude binary on the volume has to be on PATH here
+SetEnv PATH=/home/dev/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# ~/.ssh/environment is written by the entrypoint with the tokens and the
+# in-cluster API address
+PermitUserEnvironment yes
+AcceptEnv LANG LC_*
+Subsystem sftp internal-sftp
