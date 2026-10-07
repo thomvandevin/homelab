@@ -9,6 +9,7 @@ mkdir -p "$WORK" "$OUT"
 
 while true; do
   cd "$WORK" || exit 1
+  { kubectl get --raw /apis/metrics.k8s.io/v1beta1/namespaces/workspace/pods 2>/dev/null || echo '{"items":[]}'; } > wsmetrics.json
   kubectl get nodes -o json > nodes.json \
     && kubectl get namespaces -o json > namespaces.json \
     && kubectl get pods -A -o json > pods.json \
@@ -28,7 +29,7 @@ while true; do
          --slurpfile lhvolumes lhvolumes.json --slurpfile lhreplicas lhreplicas.json \
          --slurpfile workloads workloads.json --slurpfile cronjobs cronjobs.json \
          --slurpfile argo argo.json --slurpfile ingress ingress.json \
-         --slurpfile svc svc.json --slurpfile tunnel tunnel.json \
+         --slurpfile svc svc.json --slurpfile tunnel tunnel.json --slurpfile wsmetrics wsmetrics.json \
          > "$OUT/facts.json.tmp" \
     && mv "$OUT/facts.json.tmp" "$OUT/facts.json" \
     || echo "facts: refresh failed at $(date -u +%FT%TZ)" >&2

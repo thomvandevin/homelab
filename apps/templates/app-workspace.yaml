@@ -130,6 +130,8 @@ spec:
               containerPort: 2222
             - name: http
               containerPort: 8080
+            - name: status
+              containerPort: 8090
           env:
             - name: GIT_USER_NAME
               value: {{ .Values.workspace.gitUserName | quote }}
@@ -170,7 +172,7 @@ spec:
             storage: 50Gi
 ---
 # code-server has no auth of its own and the pod holds cluster-admin, so only
-# the Tailscale operator's proxies may reach it
+# the Tailscale operator's proxies may reach ssh and code-server
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -189,6 +191,13 @@ spec:
       ports:
         - port: 2222
         - port: 8080
+    # Read-only session status for the dashboard
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: glance
+      ports:
+        - port: 8090
 ---
 # A tailnet device named "workspace": `ssh dev@workspace` and VS Code Remote-SSH
 apiVersion: v1
@@ -243,3 +252,17 @@ spec:
   tls:
     - hosts:
         - code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workspace-status
+  namespace: workspace
+spec:
+  type: ClusterIP
+  selector:
+    app: workspace
+  ports:
+    - name: status
+      port: 8090
+      targetPort: 8090

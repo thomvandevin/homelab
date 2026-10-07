@@ -168,6 +168,8 @@ pages:
                     url: https://registry.snowy-gorgon.ts.net
                   - title: Media dashboard
                     url: http://homelab-media/
+                  - title: Workspace (code-server)
+                    url: https://code.snowy-gorgon.ts.net
               - title: Code
                 links:
                   - title: homelab on GitHub
@@ -184,6 +186,97 @@ pages:
               - argoproj/argo-cd
               - home-assistant/core
               - glanceapp/glance
+
+  - name: Workspace
+    columns:
+      - size: full
+        widgets:
+          # Served by the workspace pod itself (workspace-status); the session
+          # states come from Claude Code hooks, so they change as sessions work
+          - type: custom-api
+            title: Sessions
+            cache: 15s
+            url: http://workspace-status.workspace.svc.cluster.local:8090/status.json
+            template: |
+              <div class="list list-gap-14">
+              {{ range .JSON.Array "repos" }}
+                {{ $approval := false }}{{ $busy := false }}
+                {{ range .Array "sessions" }}{{ if and (.Bool "busy") (eq (.String "state") "approval") }}{{ $approval = true }}{{ end }}{{ if .Bool "busy" }}{{ $busy = true }}{{ end }}{{ end }}
+                {{ if gt (len (.Array "tools")) 0 }}{{ $busy = true }}{{ end }}
+                <div>
+                  <div class="flex items-center" style="gap:10px">
+                    <span class="{{ if $approval }}color-negative{{ else if $busy }}color-primary{{ else if .Bool "connected" }}color-highlight{{ else }}color-subdue{{ end }}">●</span>
+                    <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                      <a class="size-h5 color-highlight" href="{{ .String "web" }}" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
+                      <span class="size-h6 color-subdue">{{ if not (.Bool "window") }}no window{{ else if not (.Bool "connected") }}server not connected{{ else if .String "capacity" }}{{ .String "capacity" }} sessions{{ end }}</span>
+                    </div>
+                    <div class="size-h6 color-subdue" style="flex:0 0 auto">{{ if .String "last_activity_at" }}active <span {{ .String "last_activity_at" | parseTime "rfc3339" | toRelativeTime }}></span> ago{{ end }}</div>
+                  </div>
+                  {{ range .Array "sessions" }}
+                    {{ $state := .String "state" }}
+                    {{ $stale := and (not (.Bool "busy")) (or (eq $state "working") (eq $state "tool") (eq $state "approval")) }}
+                    <div class="size-h6 margin-top-5" style="padding-left:22px">
+                      <span class="{{ if $stale }}color-subdue{{ else if or (eq $state "approval") (eq $state "error") }}color-negative{{ else if or (eq $state "working") (eq $state "tool") }}color-primary{{ else }}color-highlight{{ end }}">{{ if $stale }}interrupted{{ else if eq $state "working" }}thinking{{ else if eq $state "tool" }}running{{ else if eq $state "approval" }}needs approval{{ else if eq $state "waiting" }}waiting for you{{ else }}{{ $state }}{{ end }}</span>
+                      {{ if .String "detail" }}· {{ if and (.String "tool") (ne (.String "detail") "thinking") }}{{ .String "tool" }}: {{ end }}{{ .String "detail" }}{{ end }}
+                      · <span {{ .String "since_at" | parseTime "rfc3339" | toRelativeTime }}></span>
+                      {{ if .String "prompt" }}<div class="color-subdue text-truncate">“{{ .String "prompt" }}”</div>{{ end }}
+                      {{ range .Array "subagents" }}<div class="color-subdue text-truncate" style="padding-left:12px">↳ {{ .String "type" }} · {{ .String "detail" }} · <span {{ .String "since_at" | parseTime "rfc3339" | toRelativeTime }}></span></div>{{ end }}
+                    </div>
+                  {{ end }}
+                  {{ range .Array "tools" }}<div class="size-h6 color-subdue text-truncate" style="padding-left:22px">process · {{ .String "args" }}</div>{{ end }}
+                </div>
+              {{ end }}
+              </div>
+
+      - size: small
+        widgets:
+          - <<: *facts
+            title: Workspace
+            cache: 30s
+            subrequests:
+              status:
+                url: http://workspace-status.workspace.svc.cluster.local:8090/status.json
+              tag:
+                url: https://gitlab.com/api/v4/projects/87354226/registry/repositories/12550260/tags/latest
+                headers:
+                  PRIVATE-TOKEN: ${GITLAB_TOKEN}
+              jobs:
+                url: https://gitlab.com/api/v4/projects/87354226/jobs
+                parameters:
+                  per_page: 20
+                headers:
+                  PRIVATE-TOKEN: ${GITLAB_TOKEN}
+            template: |
+              {{ $status := .Subrequest "status" }}
+              {{ $tag := .Subrequest "tag" }}
+              {{ $digest := .JSON.String "workspace.digest" }}
+              {{ $latest := $tag.JSON.String "digest" }}
+              {{ $deploy := "" }}{{ $deployAt := "" }}{{ $deployUrl := "https://gitlab.com/thomvandevin-projects/workspace/-/pipelines" }}
+              {{ range (.Subrequest "jobs").JSON.Array "" }}{{ if and (eq $deploy "") (eq (.String "name") "deploy") }}{{ $deploy = .String "status" }}{{ $deployAt = .String "created_at" }}{{ $deployUrl = .String "web_url" }}{{ end }}{{ end }}
+              {{ $pending := or (ne $digest $latest) (.JSON.Bool "workspace.pendingRestart") }}
+              <div class="list list-gap-10 size-h5">
+                <div class="flex justify-between"><span>Pod</span><span>{{ if not (.JSON.Bool "workspace.present") }}<span class="color-negative">missing</span>{{ else }}{{ if .JSON.Bool "workspace.ready" }}<span class="color-positive">Ready</span>{{ else }}<span class="color-negative">NotReady</span>{{ end }} · {{ .JSON.String "workspace.node" }} · up {{ .JSON.String "workspace.age" }}{{ if gt (.JSON.Int "workspace.restarts") 0 }} · {{ .JSON.Int "workspace.restarts" }} restarts{{ end }}{{ end }}</span></div>
+                <div class="flex justify-between"><span>Memory</span><span>{{ .JSON.Float "workspace.memGi" }} / {{ .JSON.Float "workspace.memLimitGi" }} GiB</span></div>
+                <div class="flex justify-between"><span>Claude Code</span><span>{{ $status.JSON.String "claude_version" }}</span></div>
+                <div class="flex justify-between"><span>Image</span><span>{{ if eq $digest $latest }}<span class="color-positive">latest</span>{{ else }}<span class="color-primary">newer build from <span {{ $tag.JSON.String "created_at" | parseTime "rfc3339" | toRelativeTime }}></span> ago</span>{{ end }}</span></div>
+                <div class="flex justify-between"><span>Restart</span><span>{{ if eq $deploy "running" }}<a class="color-primary" href="{{ $deployUrl }}" target="_blank" rel="noreferrer">waiting for idle sessions</a>{{ else if $pending }}<a class="color-primary" href="{{ $deployUrl }}" target="_blank" rel="noreferrer">pending · run deploy</a>{{ else }}<span class="color-subdue">nothing pending</span>{{ end }}</span></div>
+                <div class="flex justify-between"><span>Deploy job</span><span class="color-subdue">{{ if $deploy }}{{ $deploy }} · <span {{ $deployAt | parseTime "rfc3339" | toRelativeTime }}></span> ago{{ else }}none yet{{ end }}</span></div>
+                <div class="flex justify-between"><span>Sessions</span><span>{{ if $status.JSON.Bool "idle" }}<span class="color-highlight">all idle</span>{{ else }}<span class="color-primary">{{ len ($status.JSON.Array "reasons") }} busy</span>{{ end }}</span></div>
+                <div class="size-h6 color-subdue">ssh dev@workspace</div>
+              </div>
+
+          - type: bookmarks
+            title: Open
+            groups:
+              - links:
+                  - title: code-server
+                    url: https://code.snowy-gorgon.ts.net
+                  - title: Claude sessions
+                    url: https://claude.ai/code
+                  - title: Workspace project
+                    url: https://gitlab.com/thomvandevin-projects/workspace
+                  - title: Pipelines and deploy
+                    url: https://gitlab.com/thomvandevin-projects/workspace/-/pipelines
 
   - name: Workloads
     columns:
