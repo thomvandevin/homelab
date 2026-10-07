@@ -1,0 +1,41 @@
+name: workspace image
+run-name: workspace image
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "workspace/**"
+      - ".github/workflows/build-workspace.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "workspace/**"
+      - ".github/workflows/build-workspace.yaml"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: workspace
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/thomvandevin/workspace:latest
+            ghcr.io/thomvandevin/workspace:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
