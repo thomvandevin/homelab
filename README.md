@@ -6,6 +6,11 @@
 - homelab-1 (192.168.178.152) worker
 - homelab-2 (192.168.178.153) worker
 
+homelab-0 holds no Longhorn replicas: its single SATA SSD also carries etcd,
+and replica I/O there stalled the API server. Scheduling is disabled on its
+Longhorn node object (`allowScheduling: false`, set with kubectl, not in this
+repo), so every volume keeps its two replicas on homelab-1 and homelab-2.
+
 ## Tech stack
 
 <table>
