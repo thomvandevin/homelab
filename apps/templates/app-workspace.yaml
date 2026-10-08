@@ -174,10 +174,19 @@ spec:
             - name: config
               mountPath: /etc/workspace
               readOnly: true
+            # Claude Code reads its own binary from disk while running; on the
+            # Longhorn volume a storage stall crashed every session with a bus
+            # error, so the binary lives on node-local disk and is reinstalled at
+            # boot. Conversations and settings stay on the home volume.
+            - name: claude-bin
+              mountPath: /home/dev/.local/share/claude
       volumes:
         - name: config
           configMap:
             name: workspace-config
+        - name: claude-bin
+          emptyDir:
+            sizeLimit: 2Gi
   volumeClaimTemplates:
     - metadata:
         name: home
