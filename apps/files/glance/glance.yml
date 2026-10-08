@@ -228,6 +228,31 @@ pages:
               {{ end }}
               </div>
 
+          - type: custom-api
+            title: Schedules
+            cache: 30s
+            url: http://workspace-status.workspace.svc.cluster.local:8090/status.json
+            template: |
+              <div class="list list-gap-10">
+              {{ range .JSON.Array "schedules" }}
+                {{ $failed := ne (.Int "last.exit") 0 }}
+                <div class="flex items-center" style="gap:10px">
+                  <span class="{{ if .Bool "running" }}color-primary{{ else if $failed }}color-negative{{ else if .String "last.ended_at" }}color-highlight{{ else }}color-subdue{{ end }}">●</span>
+                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                    <span class="size-h5 color-highlight">{{ .String "name" }}</span>
+                    <span class="size-h6 color-subdue">{{ .String "repo" }} · {{ .String "cron" }}</span>
+                    {{ if .String "last.result" }}<div class="size-h6 text-truncate {{ if $failed }}color-negative{{ else }}color-subdue{{ end }}">{{ .String "last.result" }}</div>{{ end }}
+                  </div>
+                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                    {{ if .Bool "running" }}<span class="color-primary">running since <span {{ .String "last.started_at" | parseTime "rfc3339" | toRelativeTime }}></span></span>{{ else if .String "last.ended_at" }}last <span {{ .String "last.ended_at" | parseTime "rfc3339" | toRelativeTime }}></span> ago{{ if $failed }} · exit {{ .Int "last.exit" }}{{ end }}{{ else }}<span class="color-subdue">never ran</span>{{ end }}
+                    {{ if .String "next_run_at" }}<div class="color-subdue">next <span {{ .String "next_run_at" | parseTime "rfc3339" | toRelativeTime }}></span></div>{{ end }}
+                  </div>
+                </div>
+              {{ else }}
+                <div class="size-h6 color-subdue">No schedules</div>
+              {{ end }}
+              </div>
+
       - size: small
         widgets:
           - <<: *facts

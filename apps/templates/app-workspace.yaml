@@ -49,6 +49,10 @@ data:
     {{- range .Values.workspace.plugins }}
     {{ . }}
     {{- end }}
+  schedules: |
+    {{- range $name, $s := .Values.workspace.schedules }}
+    {{ dict "name" $name "repo" $s.repo "cron" $s.cron "prompt" $s.prompt "allow" ($s.allow | default list) | toJson }}
+    {{- end }}
   ssh_config: |
 {{ .Values.workspace.sshConfig | default "" | indent 4 }}
 ---

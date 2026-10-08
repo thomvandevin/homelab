@@ -31,6 +31,24 @@ workspace:
     slowpoke-bingo: git@gitlab.com:thomvandevin-projects/slowpoke-bingo.git
     thomvandev.in: git@gitlab.com:thomvandevin-projects/thomvandev.in.git
     workspace: git@gitlab.com:thomvandevin-projects/workspace.git
+  # Unattended Claude runs (cron in Europe/Amsterdam time); prompt is a file in
+  # the repo, allow pre-approves commands on top of auto mode. Apply live.
+  schedules:
+    pokemon-bot-scrape-health:
+      repo: pokemon-bot
+      cron: "31 * * * *"
+      prompt: monitoring/scrape-health.md
+      allow:
+        - Bash(monitoring/scrape_health.sh)
+        - Bash(./monitoring/scrape_health.sh)
+        - Bash(monitoring/psql.sh:*)
+        - Bash(./monitoring/psql.sh:*)
+        - Bash(monitoring/merge_seq.sh:*)
+        - Bash(./monitoring/merge_seq.sh:*)
+        - Bash(kubectl -n pokemon-bot:*)
+        - Bash(glab mr:*)
+        - Bash(glab api:*)
+        - Bash(git push:*)
   # Included by ~/.ssh/config in the workspace; changes apply live
   sshConfig: |
     Host homelab-media
