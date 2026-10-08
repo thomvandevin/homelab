@@ -66,6 +66,9 @@ data:
   GIT_USER_EMAIL: {{ .Values.workspace.gitUserEmail | b64enc | quote }}
   GH_TOKEN: {{ .Values.workspace.githubToken | b64enc | quote }}
   GITLAB_TOKEN: {{ .Values.workspace.gitlabToken | b64enc | quote }}
+  # Scheduled runs that need attention notify through the scraper's Pushover app
+  PUSHOVER_USER: {{ .Values.pushover.scraper.user | b64enc | quote }}
+  PUSHOVER_TOKEN: {{ .Values.pushover.scraper.token | b64enc | quote }}
 ---
 apiVersion: v1
 kind: Secret
