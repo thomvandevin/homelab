@@ -31,6 +31,10 @@ workspace:
     slowpoke-bingo: git@gitlab.com:thomvandevin-projects/slowpoke-bingo.git
     thomvandev.in: git@gitlab.com:thomvandevin-projects/thomvandev.in.git
     workspace: git@gitlab.com:thomvandevin-projects/workspace.git
+  # Included by ~/.ssh/config in the workspace; changes apply live
+  sshConfig: |
+    Host homelab-media
+      User homelab
   # Installed in the workspace when missing (never uninstalled); the key must
   # match the name in the marketplace's own manifest
   marketplaces:
