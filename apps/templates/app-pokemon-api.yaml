@@ -275,7 +275,7 @@ spec:
               command: ["/bin/sh", "-c"]
               args:
                 - >-
-                  curl -fsS --max-time 300 -X POST -H "X-Admin-Token: $ADMIN_TOKEN"
+                  curl -sS --fail-with-body --max-time 300 -X POST -H "X-Admin-Token: $ADMIN_TOKEN"
                   "http://pokemon-api.pokemon-api.svc.cluster.local:8080/admin/sync/prices"
               resources:
                 requests:
