@@ -25,14 +25,22 @@ jobs:
           key: ${{ secrets.KEY }}
           script: nixos-rebuild build --flake "github:thomvandevin/homelab?dir=nixos&rev=${{github.sha}}#$(hostname)"
 
+  # One approval covers the whole rollout; the nodes then switch one at a time
+  approve:
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment: live
+    name: Approve
+    steps:
+      - run: echo "Rollout of ${{ github.sha }} approved"
+
   switch:
     strategy:
       max-parallel: 1
       matrix:
         host: ["homelab-0", "homelab-1", "homelab-2"]
-    needs: [build]
+    needs: [approve]
     runs-on: self-hosted
-    environment: live
     name: Switch
     steps:
       - uses: appleboy/ssh-action@v1.2.5
