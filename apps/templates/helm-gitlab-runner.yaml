@@ -157,6 +157,20 @@ spec:
                 # (poll_timeout) rather than landing next to etcd
                 [runners.kubernetes.node_selector]
                   "thomvandev.in/role" = "worker"
+                # Docker-in-Docker test jobs saturated the disk of the node running
+                # the workspace and stalled its Longhorn volume; prefer the other worker
+                [runners.kubernetes.affinity]
+                  [runners.kubernetes.affinity.pod_anti_affinity]
+                    [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution]]
+                      weight = 100
+                      [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
+                        topology_key = "kubernetes.io/hostname"
+                        namespaces = ["workspace"]
+                        [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
+                          [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
+                            key = "app"
+                            operator = "In"
+                            values = ["workspace"]
                 [[runners.kubernetes.volumes.config_map]]
                   name = "maven-proxy-settings"
                   mount_path = "/etc/maven-proxy"
