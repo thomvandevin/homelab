@@ -25,27 +25,64 @@ jobs:
           key: ${{ secrets.KEY }}
           script: nixos-rebuild build --flake "github:thomvandevin/homelab?dir=nixos&rev=${{github.sha}}#$(hostname)"
 
-  # One approval covers the whole rollout; the nodes then switch one at a time
-  approve:
-    needs: [build]
-    runs-on: ubuntu-latest
-    environment: live
-    name: Approve
-    steps:
-      - run: echo "Rollout of ${{ github.sha }} approved"
-
+  # No approval: each node switches in turn, must come back healthy within five
+  # minutes, and is rolled back to its previous generation otherwise. A failed
+  # node fails its job, which cancels the nodes after it (fail-fast).
   switch:
     strategy:
+      fail-fast: true
       max-parallel: 1
       matrix:
         host: ["homelab-0", "homelab-1", "homelab-2"]
-    needs: [approve]
+    needs: [build]
     runs-on: self-hosted
     name: Switch
     steps:
-      - uses: appleboy/ssh-action@v1.2.5
+      - name: Switch
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ matrix.host }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.KEY }}
-          script: echo ${{ secrets.SU_PWD }} | sudo -S nixos-rebuild switch --flake "github:thomvandevin/homelab?dir=nixos&rev=${{github.sha}}#$(hostname)"
+          script: |
+            readlink /nix/var/nix/profiles/system > /tmp/nixos-before-switch
+            echo ${{ secrets.SU_PWD }} | sudo -S nixos-rebuild switch --flake "github:thomvandevin/homelab?dir=nixos&rev=${{github.sha}}#$(hostname)"
+
+      - name: Node is healthy
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ matrix.host }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          command_timeout: 6m
+          script: |
+            for i in $(seq 1 30); do
+              systemctl is-active -q k3s && [ "$(curl -fs -m 5 http://127.0.0.1:10248/healthz)" = ok ] && { echo "k3s and kubelet healthy"; exit 0; }
+              sleep 10
+            done
+            echo "k3s or kubelet not healthy after 5 minutes"; exit 1
+
+      - name: Node is Ready in the cluster
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: homelab-0
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          command_timeout: 6m
+          script: k3s kubectl wait --for=condition=Ready node/${{ matrix.host }} --timeout=300s
+
+      - name: Roll back
+        if: failure()
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ matrix.host }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          # Only undo a generation this run created; a switch that failed before
+          # creating one leaves the node on the generation it started from
+          script: |
+            if [ "$(readlink /nix/var/nix/profiles/system)" != "$(cat /tmp/nixos-before-switch 2>/dev/null)" ]; then
+              echo ${{ secrets.SU_PWD }} | sudo -S nixos-rebuild switch --rollback
+            else
+              echo "no new generation on $(hostname), nothing to roll back"
+            fi
