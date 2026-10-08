@@ -122,6 +122,16 @@
   # Configure keymap in X11
   # services.xserver.xkb.layout = "us";
   # services.xserver.xkb.options = "eurosign:e,caps:escape";
+  # CoreDNS forwards to the resolv.conf the kubelet hands it. The host's own
+  # resolv.conf is Tailscale's MagicDNS, which fails for minutes whenever
+  # tailscaled rebinds (ISP prefix changes), taking all cluster DNS with it.
+  # Tailnet names go to MagicDNS through the coredns-custom ConfigMap instead.
+  environment.etc."k3s/resolv.conf".text = ''
+    search snowy-gorgon.ts.net
+    nameserver 192.168.178.1
+    nameserver 1.1.1.1
+  '';
+
   services.k3s = lib.mkMerge [
     {
       enable = true;
@@ -142,6 +152,7 @@
         "--disable servicelb"
         "--disable traefik"
         "--disable local-storage"
+        "--resolv-conf /etc/k3s/resolv.conf"
       ];
     })
     (lib.mkIf (meta.role == "agent") {
@@ -150,6 +161,7 @@
       # the kubelet may not self-assign node-role.kubernetes.io labels, so
       # workloads select on this one instead
       nodeLabel = [ "thomvandev.in/role=worker" ];
+      extraFlags = "--resolv-conf /etc/k3s/resolv.conf";
       # drain this node's pods on reboot or poweroff instead of letting them
       # time out on the control plane
       gracefulNodeShutdown.enable = true;

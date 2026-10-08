@@ -1,0 +1,15 @@
+# Tailnet names (homelab-media, ...) keep resolving through MagicDNS; every
+# other lookup goes to the router and 1.1.1.1 via k3s --resolv-conf, so a
+# Tailscale rebind on a node no longer takes cluster DNS down with it
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  tailnet.server: |
+    snowy-gorgon.ts.net:53 {
+        errors
+        cache 30
+        forward . 100.100.100.100
+    }
