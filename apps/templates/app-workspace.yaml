@@ -154,12 +154,15 @@ spec:
           envFrom:
             - secretRef:
                 name: workspace-secret
+          # Sixteen idle sessions take about 4 GiB before any build runs; at the
+          # limit the pod stalls on reclaim instead of being killed, and every
+          # session drops its connection, so keep real headroom
           resources:
             requests:
               cpu: 500m
-              memory: 2Gi
+              memory: 6Gi
             limits:
-              memory: 8Gi
+              memory: 10Gi
           livenessProbe:
             exec:
               command: [pgrep, -x, sshd]
