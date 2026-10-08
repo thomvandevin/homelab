@@ -49,6 +49,8 @@ data:
     {{- range .Values.workspace.plugins }}
     {{ . }}
     {{- end }}
+  ssh_config: |
+{{ .Values.workspace.sshConfig | default "" | indent 4 }}
 ---
 apiVersion: v1
 kind: Secret
