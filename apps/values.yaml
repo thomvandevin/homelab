@@ -76,6 +76,5 @@ workspace:
     - gitlab@claude-plugins-official
     - kotlin-lsp@claude-plugins-official
     - mcp-tunnels@claude-plugins-official
-    - playwright@claude-plugins-official
     - redis-development@claude-plugins-official
     - typescript-lsp@claude-plugins-official
