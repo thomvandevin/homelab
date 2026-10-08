@@ -585,16 +585,22 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+          # A slow network can delay /healthz past a second; a restart drops the shop sessions and every fetch
+          # in flight, so the fetcher gets the same slack as the backends.
           readinessProbe:
             httpGet:
               path: /healthz
               port: 8090
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8090
             periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
           resources:
             requests:
               cpu: 20m
