@@ -8,6 +8,15 @@ spec:
   template:
     spec:
       repository: thomvandevin/homelab
+      # hourly Renovate runs peak near 2Gi
+      resources:
+        requests:
+          cpu: 10m
+          memory: 2Gi
+      dockerdContainerResources:
+        requests:
+          cpu: 5m
+          memory: 192Mi
       {{- include "placement.workersOnly" . | nindent 6 }}
 ---
 apiVersion: actions.summerwind.dev/v1alpha1
@@ -20,4 +29,12 @@ spec:
   template:
     spec:
       repository: thomvandevin/homelab-media
+      resources:
+        requests:
+          cpu: 10m
+          memory: 128Mi
+      dockerdContainerResources:
+        requests:
+          cpu: 5m
+          memory: 64Mi
       {{- include "placement.workersOnly" . | nindent 6 }}

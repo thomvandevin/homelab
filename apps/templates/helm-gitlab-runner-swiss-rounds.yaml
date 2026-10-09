@@ -48,6 +48,10 @@ spec:
     helm:
       valuesObject:
         gitlabUrl: https://gitlab.com
+        resources:
+          requests:
+            cpu: 10m
+            memory: 96Mi
         # shares the workers with the closet runner; chart default of 10 is what
         # allowed a dozen job pods at once
         concurrent: 3

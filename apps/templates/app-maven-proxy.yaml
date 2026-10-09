@@ -150,10 +150,10 @@ spec:
             failureThreshold: 5
           resources:
             requests:
-              cpu: 25m
-              memory: 256Mi
+              cpu: 10m
+              memory: 320Mi
             limits:
-              memory: 768Mi
+              memory: 640Mi
           volumeMounts:
             - name: data
               mountPath: /app/data

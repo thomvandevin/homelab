@@ -163,10 +163,9 @@ spec:
             periodSeconds: 10
           resources:
             requests:
-              cpu: 200m
-              memory: 512Mi
+              cpu: 20m
+              memory: 640Mi
             limits:
-              cpu: 1000m
               memory: 1Gi
 ---
 apiVersion: v1
@@ -216,9 +215,8 @@ spec:
               resources:
                 requests:
                   cpu: 500m
-                  memory: 1Gi
+                  memory: 2Gi
                 limits:
-                  cpu: 2000m
                   memory: 3Gi
 ---
 # Compendium rulings sync: recent.
@@ -257,7 +255,6 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
 ---
 # Cardmarket price guide; Cardmarket publishes the file around 00:51 UTC.
@@ -295,7 +292,6 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
 ---
 # Compendium rulings sync: full.
@@ -334,5 +330,4 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
