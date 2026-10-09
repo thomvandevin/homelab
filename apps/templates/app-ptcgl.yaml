@@ -233,7 +233,7 @@ spec:
                 limits:
                   memory: 2Gi
 ---
-# -- Public assets: pokemon-api.thomvandev.in/assets/* via the tunnel path rule --
+# -- Public images: pokemon-api.thomvandev.in/images/* via the tunnel path rule (/assets is the portal's) --
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -243,7 +243,7 @@ data:
   default.conf: |
     server {
       listen 80;
-      location /assets/ {
+      location /images/ {
         limit_except GET { deny all; }
         proxy_pass http://rustfs.ptcgl.svc.cluster.local:9000/ptcgl/;
         proxy_set_header Host rustfs.ptcgl.svc.cluster.local:9000;

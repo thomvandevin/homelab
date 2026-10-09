@@ -66,7 +66,7 @@ spec:
             - hostname: pokemon-ai.thomvandev.in
               service: http://chat-ui.pokemon-ai.svc.cluster.local:80
             - hostname: pokemon-api.thomvandev.in
-              path: ^/assets/
+              path: ^/images/
               service: http://ptcgl-assets.ptcgl.svc.cluster.local:80
             - hostname: pokemon-api.thomvandev.in
               service: http://pokemon-api.pokemon-api.svc.cluster.local:8080

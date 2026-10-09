@@ -92,7 +92,7 @@ repo), so every volume keeps its two replicas on homelab-1 and homelab-2.
 ## PTCGL mirror (namespace `ptcgl`)
 
 Marvin's ptcgl.dev sync mirrors Pokemon TCG Live card data and images nightly (02:40) into the `ptcgl`
-database and the RustFS bucket `ptcgl`; pokemon-api serves the images under `/assets/`.
+database and the RustFS bucket `ptcgl`; pokemon-api serves the images under `/images/` (`/assets/` belongs to the portal build).
 
 - New PTCS account or a dead token: put a fresh `ory_rt_*` refresh token in `pokemon_api.ptcs_refresh_token`
   (`sops apps/secrets.yaml`), push, wait for Argo, then run a sync:
