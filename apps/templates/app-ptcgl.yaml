@@ -195,6 +195,10 @@ spec:
               env:
                 - name: SPRING_PROFILES_ACTIVE
                   value: kubernetes
+                # The pinned client version in the image (1.40.0) points at a pruned CDN content tree; bump to the live
+                # TCGL version (newest https://cdn.studio-prod.pokemon.com/rainier/GameSettings/{v}/GameSettings.json that answers 200).
+                - name: RAINIER_APP_VERSION
+                  value: "1.43.0"
                 - name: SPRING_DATASOURCE_URL
                   value: jdbc:postgresql://postgresql.db-system.svc.cluster.local:5432/ptcgl
                 - name: SPRING_DATASOURCE_USERNAME
