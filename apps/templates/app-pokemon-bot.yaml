@@ -82,8 +82,8 @@ spec:
               value: guest
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 10m
+              memory: 128Mi
             limits:
               memory: 512Mi
           volumeMounts:
@@ -151,7 +151,6 @@ spec:
               cpu: 50m
               memory: 64Mi
             limits:
-              cpu: 100m
               memory: 128Mi
       restartPolicy: OnFailure
 ---
@@ -225,7 +224,7 @@ spec:
             failureThreshold: 5
           resources:
             requests:
-              cpu: 100m
+              cpu: 10m
               memory: 256Mi
             limits:
               memory: 512Mi
@@ -354,8 +353,8 @@ spec:
             failureThreshold: 5
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 10m
+              memory: 384Mi
             limits:
               memory: 512Mi
 ---
@@ -397,10 +396,8 @@ spec:
             - containerPort: 80
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              memory: 128Mi
+              cpu: 5m
+              memory: 32Mi
 ---
 apiVersion: v1
 kind: Service
@@ -440,10 +437,8 @@ spec:
             - containerPort: 80
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              memory: 128Mi
+              cpu: 5m
+              memory: 32Mi
 ---
 apiVersion: v1
 kind: Service
@@ -532,8 +527,8 @@ spec:
             failureThreshold: 5
           resources:
             requests:
-              cpu: 500m
-              memory: 1536Mi
+              cpu: 50m
+              memory: 1280Mi
             limits:
               memory: 3Gi
 ---
@@ -603,10 +598,10 @@ spec:
             failureThreshold: 5
           resources:
             requests:
-              cpu: 20m
-              memory: 64Mi
+              cpu: 10m
+              memory: 96Mi
             limits:
-              memory: 256Mi
+              memory: 192Mi
 ---
 apiVersion: v1
 kind: Service
@@ -700,7 +695,7 @@ spec:
             failureThreshold: 5
           resources:
             requests:
-              cpu: 250m
+              cpu: 10m
               memory: 512Mi
             limits:
               memory: 1Gi
@@ -788,7 +783,7 @@ spec:
             failureThreshold: 5
           resources:
             requests:
-              cpu: 250m
+              cpu: 10m
               memory: 512Mi
             limits:
               memory: 1Gi

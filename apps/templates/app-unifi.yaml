@@ -104,10 +104,9 @@ spec:
                   key: mongo-password
           resources:
             requests:
-              cpu: 50m
+              cpu: 20m
               memory: 256Mi
             limits:
-              cpu: "1"
               memory: 1Gi
           volumeMounts:
             - name: db
@@ -191,11 +190,10 @@ spec:
             - { containerPort: 10001, protocol: UDP, name: discovery }
           resources:
             requests:
-              cpu: 100m
-              memory: 768Mi
+              cpu: 10m
+              memory: 896Mi
             limits:
-              cpu: "2"
-              memory: 2Gi
+              memory: 1536Mi
           volumeMounts:
             - name: config
               mountPath: /config
