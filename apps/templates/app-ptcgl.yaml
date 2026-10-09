@@ -59,12 +59,12 @@ spec:
               value: /data
             - name: RUSTFS_CONSOLE_ENABLE
               value: "false"
-            - name: RUSTFS_ROOT_USER
+            - name: RUSTFS_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: ptcgl-secret
                   key: s3-access-key
-            - name: RUSTFS_ROOT_PASSWORD
+            - name: RUSTFS_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: ptcgl-secret
@@ -115,6 +115,7 @@ spec:
   jobTemplate:
     spec:
       backoffLimit: 0
+      activeDeadlineSeconds: 21600
       template:
         spec:
           restartPolicy: Never
@@ -142,6 +143,7 @@ spec:
                   psql -h postgresql.db-system.svc.cluster.local -U postgres -d ptcgl -v ON_ERROR_STOP=1 <<'SQL'
                   \getenv token PTCS_REFRESH_TOKEN
                   \getenv note NOTE
+                  SET log_min_error_statement = panic;
                   SELECT to_regclass('public.auth_state') IS NOT NULL AS ready \gset
                   \if :ready
                   INSERT INTO auth_state (id, refresh_token, refresh_token_updated_at, access_token, access_token_expires_at, note)
@@ -242,7 +244,7 @@ data:
         proxy_pass http://rustfs.ptcgl.svc.cluster.local:9000/ptcgl/;
         proxy_set_header Host rustfs.ptcgl.svc.cluster.local:9000;
         proxy_hide_header Set-Cookie;
-        add_header Cache-Control "public, max-age=604800" always;
+        add_header Cache-Control "public, max-age=604800";
       }
       location / { return 404; }
     }
