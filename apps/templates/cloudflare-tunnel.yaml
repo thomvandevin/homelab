@@ -66,6 +66,9 @@ spec:
             - hostname: pokemon-ai.thomvandev.in
               service: http://chat-ui.pokemon-ai.svc.cluster.local:80
             - hostname: pokemon-api.thomvandev.in
+              path: ^/assets/
+              service: http://ptcgl-assets.ptcgl.svc.cluster.local:80
+            - hostname: pokemon-api.thomvandev.in
               service: http://pokemon-api.pokemon-api.svc.cluster.local:8080
             # Decklist
             # /preload and /cleanup are unauthenticated admin routes: one

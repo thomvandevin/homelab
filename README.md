@@ -88,3 +88,15 @@ repo), so every volume keeps its two replicas on homelab-1 and homelab-2.
         <td>Declarative GitOps CD for Kubernetes</td>
     </tr>
 </table>
+
+## PTCGL mirror (namespace `ptcgl`)
+
+Marvin's ptcgl.dev sync mirrors Pokemon TCG Live card data and images nightly (02:40) into the `ptcgl`
+database and the RustFS bucket `ptcgl`; pokemon-api serves the images under `/assets/`.
+
+- New PTCS account or a dead token: put a fresh `ory_rt_*` refresh token in `pokemon_api.ptcs_refresh_token`
+  (`sops apps/secrets.yaml`), push, wait for Argo, then run a sync:
+  `kubectl -n ptcgl create job --from=cronjob/ptcgl-sync ptcgl-manual-$(date +%s)`. The `seed-auth` init
+  container writes the new token once; the sync rotates it from then on. Do not log in to TCGL with the same
+  token elsewhere: it is single use.
+- Status: `SELECT * FROM ingest_run ORDER BY id DESC LIMIT 5;` in database `ptcgl`, and the job logs.

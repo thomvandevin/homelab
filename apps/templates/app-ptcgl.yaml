@@ -1,0 +1,294 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    glance/icon: mdi:cards
+  name: ptcgl
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: ptcgl-secret
+  namespace: ptcgl
+data:
+  db-password: {{ .Values.db.password | b64enc | quote }}
+  s3-access-key: {{ .Values.ptcgl.s3_access_key | b64enc | quote }}
+  s3-secret-key: {{ .Values.ptcgl.s3_secret_key | b64enc | quote }}
+  ptcs-refresh-token: {{ .Values.pokemon_api.ptcs_refresh_token | b64enc | quote }}
+---
+# -- RustFS (S3-compatible store for the mirror) -------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rustfs-data
+  namespace: ptcgl
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 30Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs
+  namespace: ptcgl
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rustfs
+  template:
+    metadata:
+      labels:
+        app: rustfs
+    spec:
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:1.0.1
+          ports:
+            - containerPort: 9000
+          env:
+            - name: RUSTFS_VOLUMES
+              value: /data
+            - name: RUSTFS_CONSOLE_ENABLE
+              value: "false"
+            - name: RUSTFS_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ptcgl-secret
+                  key: s3-access-key
+            - name: RUSTFS_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ptcgl-secret
+                  key: s3-secret-key
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rustfs-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs
+  namespace: ptcgl
+spec:
+  selector:
+    app: rustfs
+  ports:
+    - port: 9000
+      targetPort: 9000
+---
+# -- Mirror sync (github.com/zwolsman/ptcgl.dev) -------------------------------
+# The init containers are idempotent and run before every sync. seed-auth writes the SOPS token only when
+# auth_state.note does not carry that token's hash, so a token the sync has rotated is never overwritten.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ptcgl-sync
+  namespace: ptcgl
+spec:
+  schedule: "40 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          initContainers:
+            - name: create-db
+              image: postgres:17-alpine
+              command: ["sh", "-c"]
+              args:
+                - |
+                  until pg_isready -h postgresql.db-system.svc.cluster.local -p 5432; do sleep 2; done
+                  psql -h postgresql.db-system.svc.cluster.local -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'ptcgl'" | grep -q 1 || psql -h postgresql.db-system.svc.cluster.local -U postgres -c "CREATE DATABASE ptcgl"
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: ptcgl-secret
+                      key: db-password
+            - name: seed-auth
+              image: postgres:17-alpine
+              command: ["sh", "-c"]
+              args:
+                - |
+                  NOTE="seed:$(printf %s "$PTCS_REFRESH_TOKEN" | sha256sum | cut -c1-16)"
+                  export NOTE
+                  psql -h postgresql.db-system.svc.cluster.local -U postgres -d ptcgl -v ON_ERROR_STOP=1 <<'SQL'
+                  \getenv token PTCS_REFRESH_TOKEN
+                  \getenv note NOTE
+                  SELECT to_regclass('public.auth_state') IS NOT NULL AS ready \gset
+                  \if :ready
+                  INSERT INTO auth_state (id, refresh_token, refresh_token_updated_at, access_token, access_token_expires_at, note)
+                  VALUES (1, :'token', now(), NULL, NULL, :'note')
+                  ON CONFLICT (id) DO UPDATE SET
+                      refresh_token = EXCLUDED.refresh_token, refresh_token_updated_at = now(),
+                      access_token = NULL, access_token_expires_at = NULL, note = EXCLUDED.note
+                  WHERE auth_state.note IS DISTINCT FROM EXCLUDED.note;
+                  \else
+                  \echo auth_state does not exist yet; the sync creates it
+                  \endif
+                  SQL
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: ptcgl-secret
+                      key: db-password
+                - name: PTCS_REFRESH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: ptcgl-secret
+                      key: ptcs-refresh-token
+            - name: bucket
+              image: amazon/aws-cli:2.37.11@sha256:d55d5b391f1cc0d428a05eb07408bb1a730d7df9f656008f1117ed5e13b0c083
+              command: ["sh", "-c"]
+              args:
+                - |
+                  E=http://rustfs.ptcgl.svc.cluster.local:9000
+                  aws --endpoint-url $E s3api head-bucket --bucket ptcgl 2>/dev/null || aws --endpoint-url $E s3api create-bucket --bucket ptcgl
+                  aws --endpoint-url $E s3api put-bucket-policy --bucket ptcgl --policy '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::ptcgl/decoded/*"]}]}'
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: ptcgl-secret
+                      key: s3-access-key
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: ptcgl-secret
+                      key: s3-secret-key
+                - name: AWS_DEFAULT_REGION
+                  value: us-east-1
+          containers:
+            - name: sync
+              image: ghcr.io/zwolsman/ptcgl-sync:7415f01
+              args: ["--sync", "--locale=en"]
+              env:
+                - name: SPRING_PROFILES_ACTIVE
+                  value: kubernetes
+                - name: SPRING_DATASOURCE_URL
+                  value: jdbc:postgresql://postgresql.db-system.svc.cluster.local:5432/ptcgl
+                - name: SPRING_DATASOURCE_USERNAME
+                  value: postgres
+                - name: SPRING_DATASOURCE_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: ptcgl-secret
+                      key: db-password
+                - name: MIRROR_S3_ENDPOINT
+                  value: http://rustfs.ptcgl.svc.cluster.local:9000
+                - name: MIRROR_S3_BUCKET
+                  value: ptcgl
+                - name: MIRROR_S3_REGION
+                  value: us-east-1
+                - name: MIRROR_S3_FORCE_PATH_STYLE
+                  value: "true"
+                - name: MIRROR_S3_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: ptcgl-secret
+                      key: s3-access-key
+                - name: MIRROR_S3_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: ptcgl-secret
+                      key: s3-secret-key
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+                limits:
+                  memory: 2Gi
+---
+# -- Public assets: pokemon-api.thomvandev.in/assets/* via the tunnel path rule --
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ptcgl-assets-nginx
+  namespace: ptcgl
+data:
+  default.conf: |
+    server {
+      listen 80;
+      location /assets/ {
+        limit_except GET { deny all; }
+        proxy_pass http://rustfs.ptcgl.svc.cluster.local:9000/ptcgl/;
+        proxy_set_header Host rustfs.ptcgl.svc.cluster.local:9000;
+        proxy_hide_header Set-Cookie;
+        add_header Cache-Control "public, max-age=604800" always;
+      }
+      location / { return 404; }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ptcgl-assets
+  namespace: ptcgl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ptcgl-assets
+  template:
+    metadata:
+      labels:
+        app: ptcgl-assets
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.29-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/nginx/conf.d
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+      volumes:
+        - name: conf
+          configMap:
+            name: ptcgl-assets-nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ptcgl-assets
+  namespace: ptcgl
+spec:
+  selector:
+    app: ptcgl-assets
+  ports:
+    - port: 80
+      targetPort: 80
