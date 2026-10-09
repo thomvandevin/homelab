@@ -120,6 +120,25 @@ spec:
         spec:
           restartPolicy: Never
           initContainers:
+            # The image pins a TCGL client version whose CDN content tree gets pruned after updates; find the newest
+            # one that answers (falling back to the last known one) and hand it to the sync.
+            - name: find-version
+              image: curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  best=1.43.0
+                  for m in 43 44 45 46 47 48; do
+                    for p in 0 1 2 3 4 5 6 7 8 9; do
+                      c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://cdn.studio-prod.pokemon.com/rainier/GameSettings/1.$m.$p/GameSettings.json")
+                      [ "$c" = 200 ] && best="1.$m.$p"
+                    done
+                  done
+                  echo "$best" > /shared/version
+                  echo "TCGL client version $best"
+              volumeMounts:
+                - name: shared
+                  mountPath: /shared
             - name: create-db
               image: postgres:17-alpine
               command: ["sh", "-c"]
@@ -191,14 +210,15 @@ spec:
           containers:
             - name: sync
               image: ghcr.io/zwolsman/ptcgl-sync:7415f01
-              args: ["--sync", "--locale=en"]
+              command: ["sh", "-c"]
+              args:
+                - exec java -jar /app/app.jar --sync --locale=en --rainier.app-version="$(cat /shared/version 2>/dev/null || echo 1.43.0)"
+              volumeMounts:
+                - name: shared
+                  mountPath: /shared
               env:
                 - name: SPRING_PROFILES_ACTIVE
                   value: kubernetes
-                # The pinned client version in the image (1.40.0) points at a pruned CDN content tree; bump to the live
-                # TCGL version (newest https://cdn.studio-prod.pokemon.com/rainier/GameSettings/{v}/GameSettings.json that answers 200).
-                - name: RAINIER_APP_VERSION
-                  value: "1.43.0"
                 - name: SPRING_DATASOURCE_URL
                   value: jdbc:postgresql://postgresql.db-system.svc.cluster.local:5432/ptcgl
                 - name: SPRING_DATASOURCE_USERNAME
@@ -232,6 +252,9 @@ spec:
                   memory: 512Mi
                 limits:
                   memory: 2Gi
+          volumes:
+            - name: shared
+              emptyDir: {}
 ---
 # -- Public images: pokemon-api.thomvandev.in/images/* via the tunnel path rule (/assets is the portal's) --
 apiVersion: v1
@@ -241,15 +264,34 @@ metadata:
   namespace: ptcgl
 data:
   default.conf: |
+    # RustFS stores the decoded objects without a useful content type.
+    map $uri $asset_type {
+      ~*\.png$  image/png;
+      ~*\.json$ application/json;
+      default    application/octet-stream;
+    }
     server {
       listen 80;
+      server_tokens off;
       location /images/ {
         limit_except GET { deny all; }
         proxy_pass http://rustfs.ptcgl.svc.cluster.local:9000/ptcgl/;
         proxy_set_header Host rustfs.ptcgl.svc.cluster.local:9000;
         proxy_hide_header Set-Cookie;
+        proxy_hide_header Content-Type;
+        proxy_hide_header Server;
+        proxy_hide_header x-amz-request-id;
+        proxy_hide_header x-amz-id-2;
+        proxy_hide_header x-request-id;
+        # RustFS error bodies name the bucket and key; the public only sees a status.
+        proxy_intercept_errors on;
+        error_page 403 404 = @missing;
+        error_page 500 502 503 504 = @unavailable;
+        add_header Content-Type $asset_type;
         add_header Cache-Control "public, max-age=604800";
       }
+      location @missing { return 404; }
+      location @unavailable { return 502; }
       location / { return 404; }
     }
 ---
