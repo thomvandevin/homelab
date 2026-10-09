@@ -51,7 +51,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rustfs
-          image: rustfs/rustfs:1.0.1
+          image: rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c
           ports:
             - containerPort: 9000
           env:
@@ -140,7 +140,7 @@ spec:
                 - name: shared
                   mountPath: /shared
             - name: create-db
-              image: postgres:17-alpine
+              image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
               command: ["sh", "-c"]
               args:
                 - |
@@ -153,7 +153,7 @@ spec:
                       name: ptcgl-secret
                       key: db-password
             - name: seed-auth
-              image: postgres:17-alpine
+              image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
               command: ["sh", "-c"]
               args:
                 - |
@@ -209,7 +209,7 @@ spec:
                   value: us-east-1
           containers:
             - name: sync
-              image: ghcr.io/zwolsman/ptcgl-sync:7415f01
+              image: ghcr.io/zwolsman/ptcgl-sync:7415f01@sha256:ab61a08b6ce337c5f2a0cae7c70c06a2bc55662116cc87b9e67424690f202c63
               command: ["sh", "-c"]
               args:
                 - exec java -jar /app/app.jar --sync --locale=en --rainier.app-version="$(cat /shared/version 2>/dev/null || echo 1.43.0)"
@@ -312,7 +312,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: nginx:1.29-alpine
+          image: nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
           ports:
             - containerPort: 80
           volumeMounts:

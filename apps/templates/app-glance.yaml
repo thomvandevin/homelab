@@ -114,7 +114,7 @@ spec:
       serviceAccountName: glance-facts
       containers:
         - name: glance
-          image: glanceapp/glance:v0.8.6
+          image: glanceapp/glance:v0.8.6@sha256:9dfb09470b207dcb67ac715994bdb1929374ba3f9c0d7df7462c24adf10fd073
           ports:
             - containerPort: 8080
               name: http
