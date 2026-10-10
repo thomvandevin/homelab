@@ -50,6 +50,7 @@ data:
   admin-token: {{ .Values.pokemon_api.admin_token | b64enc | quote }}
   portal-secret: {{ .Values.pokemon_api.portal_secret | default "" | b64enc | quote }}
   admin-password-hash: {{ .Values.pokemon_api.admin_password_hash | default "" | b64enc | quote }}
+  ptcgl-reader-password: {{ required "pokemon_api.ptcgl_reader_password is missing from secrets.yaml" .Values.pokemon_api.ptcgl_reader_password | b64enc | quote }}
 ---
 apiVersion: v1
 kind: Secret
@@ -88,12 +89,26 @@ spec:
             - |
               until pg_isready -h postgresql.db-system.svc.cluster.local -p 5432; do sleep 2; done
               PGPASSWORD=$DB_PASSWORD psql -h postgresql.db-system.svc.cluster.local -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'pokemon_api'" | grep -q 1 || PGPASSWORD=$DB_PASSWORD psql -h postgresql.db-system.svc.cluster.local -U postgres -c "CREATE DATABASE pokemon_api"
+              # pokemon-api only reads the PTCGL mirror; it gets its own read-only login, granted again on every start
+              # so tables a mirror sync adds later stay readable. Skipped until the mirror's database exists.
+              export PGPASSWORD=$DB_PASSWORD
+              PG="psql -h postgresql.db-system.svc.cluster.local -U postgres -v ON_ERROR_STOP=1"
+              if $PG -tc "SELECT 1 FROM pg_database WHERE datname = 'ptcgl'" | grep -q 1; then
+                $PG -tc "SELECT 1 FROM pg_roles WHERE rolname = 'ptcgl_reader'" | grep -q 1 || $PG -c "CREATE ROLE ptcgl_reader LOGIN"
+                $PG -c "ALTER ROLE ptcgl_reader WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '$READER_PASSWORD'"
+                $PG -d ptcgl -c "GRANT CONNECT ON DATABASE ptcgl TO ptcgl_reader" -c "GRANT USAGE ON SCHEMA public TO ptcgl_reader" -c "GRANT SELECT ON ALL TABLES IN SCHEMA public TO ptcgl_reader" -c "ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO ptcgl_reader"
+              fi
           env:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: db-secret
                   key: password
+            - name: READER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: ptcgl-reader-password
       containers:
         - name: pokemon-api
           image: registry.gitlab.com/thomvandevin-projects/pokemon-api:latest
@@ -136,12 +151,12 @@ spec:
             - name: PTCGL_DB_NAME
               value: ptcgl
             - name: PTCGL_DB_USER
-              value: postgres
+              value: ptcgl_reader
             - name: PTCGL_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: db-secret
-                  key: password
+                  name: api-secret
+                  key: ptcgl-reader-password
             - name: ADMIN_TOKEN
               valueFrom:
                 secretKeyRef:
