@@ -1,0 +1,14 @@
+# CoreDNS belongs to k3s, which leaves its replica count alone: it runs 2 replicas, set once with
+# `kubectl -n kube-system scale deploy coredns --replicas=2` (2026-10-10), and its built-in topology spread keeps them
+# on different nodes, so name resolution no longer depends on one node. This budget stops a node drain from taking
+# both down at once.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: coredns
+  namespace: kube-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
