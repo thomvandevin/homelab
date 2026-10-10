@@ -127,6 +127,8 @@ spec:
                 secretKeyRef:
                   name: db-secret
                   key: password
+            - name: CARD_MIRROR_OVERLAY
+              value: "on"
             - name: PTCGL_DB_HOST
               value: postgresql.db-system.svc.cluster.local
             - name: PTCGL_DB_PORT
