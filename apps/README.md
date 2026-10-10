@@ -145,6 +145,9 @@ pushover:
   scraper:
     user: "user-key"
     token: "app-token"
+  homelab:
+    user: "user-key"
+    token: "app-token"
 gcr:
   scraper: "base64-encoded-dockerconfigjson"
   swiss_rounds: "base64-encoded-dockerconfigjson"
