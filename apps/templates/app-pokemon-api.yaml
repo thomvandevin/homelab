@@ -89,15 +89,21 @@ spec:
             - |
               until pg_isready -h postgresql.db-system.svc.cluster.local -p 5432; do sleep 2; done
               PGPASSWORD=$DB_PASSWORD psql -h postgresql.db-system.svc.cluster.local -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'pokemon_api'" | grep -q 1 || PGPASSWORD=$DB_PASSWORD psql -h postgresql.db-system.svc.cluster.local -U postgres -c "CREATE DATABASE pokemon_api"
-              # pokemon-api only reads the PTCGL mirror; it gets its own read-only login, granted again on every start
-              # so tables a mirror sync adds later stay readable. Skipped until the mirror's database exists.
+              # pokemon-api only reads the PTCGL mirror, with its own read-only login, granted again on every start so
+              # tables a mirror sync adds later stay readable. The mirror's database is created here when missing so the
+              # login exists before the first sync. A failing grant must not keep the API down; the mirror is optional.
               export PGPASSWORD=$DB_PASSWORD
-              PG="psql -h postgresql.db-system.svc.cluster.local -U postgres -v ON_ERROR_STOP=1"
-              if $PG -tc "SELECT 1 FROM pg_database WHERE datname = 'ptcgl'" | grep -q 1; then
-                $PG -tc "SELECT 1 FROM pg_roles WHERE rolname = 'ptcgl_reader'" | grep -q 1 || $PG -c "CREATE ROLE ptcgl_reader LOGIN"
-                $PG -c "ALTER ROLE ptcgl_reader WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '$READER_PASSWORD'"
-                $PG -d ptcgl -c "GRANT CONNECT ON DATABASE ptcgl TO ptcgl_reader" -c "GRANT USAGE ON SCHEMA public TO ptcgl_reader" -c "GRANT SELECT ON ALL TABLES IN SCHEMA public TO ptcgl_reader" -c "ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO ptcgl_reader"
-              fi
+              PG="psql -h postgresql.db-system.svc.cluster.local -U postgres"
+              $PG -tc "SELECT 1 FROM pg_database WHERE datname = 'ptcgl'" | grep -q 1 || $PG -c "CREATE DATABASE ptcgl"
+              $PG -v ON_ERROR_STOP=1 -d ptcgl <<'SQL' || echo "ptcgl_reader grants failed; pokemon-api starts without them"
+              \getenv pw READER_PASSWORD
+              SELECT 'CREATE ROLE ptcgl_reader' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ptcgl_reader')\gexec
+              ALTER ROLE ptcgl_reader WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD :'pw';
+              GRANT CONNECT ON DATABASE ptcgl TO ptcgl_reader;
+              GRANT USAGE ON SCHEMA public TO ptcgl_reader;
+              GRANT SELECT ON ALL TABLES IN SCHEMA public TO ptcgl_reader;
+              ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO ptcgl_reader;
+              SQL
           env:
             - name: DB_PASSWORD
               valueFrom:
