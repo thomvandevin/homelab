@@ -99,6 +99,7 @@ spec:
 {{- if .Values.pokemon_api.db_password }}
               # pokemon-api owns its own database and only reads the tournament database, as a plain role. Existing
               # tables were created by postgres, so ownership moves once; PostgreSQL will not REASSIGN from a superuser.
+              # ($do$ rather than $$: Kubernetes turns $$ in container args into a single $.)
               $PG -v ON_ERROR_STOP=1 <<'SQL'
               \getenv pw APP_PASSWORD
               SELECT 'CREATE ROLE pokemon_api' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pokemon_api')\gexec
@@ -107,7 +108,7 @@ spec:
               GRANT CONNECT ON DATABASE limitless_tournaments_db TO pokemon_api;
               SQL
               $PG -v ON_ERROR_STOP=1 -d pokemon_api <<'SQL'
-              DO $$ DECLARE r record; BEGIN
+              DO $do$ DECLARE r record; BEGIN
                 FOR r IN SELECT tablename AS n FROM pg_tables WHERE schemaname = 'public' AND tableowner <> 'pokemon_api' LOOP
                   EXECUTE format('ALTER TABLE public.%I OWNER TO pokemon_api', r.n);
                 END LOOP;
@@ -117,7 +118,7 @@ spec:
                 FOR r IN SELECT viewname AS n FROM pg_views WHERE schemaname = 'public' AND viewowner <> 'pokemon_api' LOOP
                   EXECUTE format('ALTER VIEW public.%I OWNER TO pokemon_api', r.n);
                 END LOOP;
-              END $$;
+              END $do$;
               SQL
               $PG -v ON_ERROR_STOP=1 -d limitless_tournaments_db <<'SQL' || echo "tournament database grants failed; the meta tools may be empty until the next start"
               GRANT USAGE ON SCHEMA public TO pokemon_api;
