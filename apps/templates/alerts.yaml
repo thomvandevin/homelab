@@ -1,0 +1,179 @@
+# Cluster alerts to Pushover, every 10 minutes, without the Prometheus stack: it lists failed Jobs, crash-looping
+# pods and nodes that are not Ready, and sends each one once. The last set of problems is kept in a ConfigMap so a
+# problem that stays does not repeat and one that comes back after being fixed alerts again. A node that recovers gets
+# a "resolved" message. Uses the same Pushover app as the scraper and the workspace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    glance/icon: mdi:bell-alert
+  name: alerts
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: pushover
+  namespace: alerts
+data:
+  user: {{ .Values.pushover.scraper.user | b64enc | quote }}
+  token: {{ .Values.pushover.scraper.token | b64enc | quote }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alerts
+  namespace: alerts
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: alerts-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "nodes"]
+    verbs: ["get", "list"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: alerts-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: alerts-reader
+subjects:
+  - kind: ServiceAccount
+    name: alerts
+    namespace: alerts
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alerts-state
+  namespace: alerts
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alerts-state
+  namespace: alerts
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: alerts-state
+subjects:
+  - kind: ServiceAccount
+    name: alerts
+    namespace: alerts
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alerts-watch
+  namespace: alerts
+data:
+  watch.sh: |
+    #!/bin/sh
+    set -eu
+    now=$(date +%s)
+    day_ago=$(date -u -d "@$((now - 86400))" +%Y-%m-%dT%H:%M:%SZ)
+    previous=$(kubectl -n alerts get configmap alerts-state -o jsonpath='{.data.keys}' 2>/dev/null || true)
+
+    # Jobs that failed in the last day (older failures were seen by an earlier run, or predate the watcher).
+    jobs=$(kubectl get jobs -A -o json | jq -r --arg since "$day_ago" '
+      .items[] | select((.status.failed // 0) > 0 and (.status.succeeded // 0) == 0)
+      | select(([.status.conditions[]? | select(.type == "Failed" and .lastTransitionTime > $since)] | length) > 0)
+      | "job \(.metadata.namespace)/\(.metadata.name) \(.metadata.uid)"')
+    crashloops=$(kubectl get pods -A -o json | jq -r '
+      .items[] | . as $p | (.status.containerStatuses // [])[]
+      | select(.state.waiting.reason == "CrashLoopBackOff" and .restartCount >= 3)
+      | "crashloop \($p.metadata.namespace)/\($p.metadata.name) \($p.metadata.uid)"' | sort -u)
+    nodes=$(kubectl get nodes -o json | jq -r '
+      .items[] | select(([.status.conditions[] | select(.type == "Ready" and .status == "True")] | length) == 0)
+      | "node \(.metadata.name) notready"')
+    current=$(printf '%s\n%s\n%s\n' "$jobs" "$crashloops" "$nodes" | sed '/^$/d')
+
+    notify() {
+      curl -sS -m 20 -o /dev/null -F "token=$PUSHOVER_TOKEN" -F "user=$PUSHOVER_USER" \
+        -F "title=$1" -F "message=$2" -F "priority=$3" https://api.pushover.net/1/messages.json
+    }
+
+    printf '%s\n' "$current" | while read -r kind name rest; do
+      [ -z "$kind" ] && continue
+      printf '%s\n' "$previous" | grep -qxF "$kind $name $rest" && continue
+      case "$kind" in
+        job)
+          ns=${name%%/*}; job=${name#*/}
+          logs=$(kubectl -n "$ns" logs "job/$job" --tail=6 2>&1 | cut -c1-200 | head -c 700 || true)
+          notify "Job failed: $job" "$ns/$job
+    $logs" 0 ;;
+        crashloop)
+          notify "Crash loop: ${name#*/}" "$name keeps restarting" 0 ;;
+        node)
+          notify "Node not ready: $name" "$name is not Ready; name resolution and apps on it may be down" 1 ;;
+      esac
+      echo "alerted: $kind $name"
+    done
+
+    # Nodes that were not Ready last time and are now.
+    printf '%s\n' "$previous" | grep '^node ' | while read -r kind name rest; do
+      [ -z "$kind" ] && continue
+      printf '%s\n' "$current" | grep -qxF "$kind $name $rest" || notify "Node ready again: $name" "$name is Ready" 0
+    done
+
+    kubectl -n alerts create configmap alerts-state --from-literal=keys="$current" --dry-run=client -o yaml | kubectl apply -f -
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: alerts-watch
+  namespace: alerts
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 240
+      template:
+        spec:
+          serviceAccountName: alerts
+          restartPolicy: Never
+          containers:
+            - name: watch
+              image: alpine/k8s:1.36.5
+              command: ["sh", "/scripts/watch.sh"]
+              env:
+                - name: PUSHOVER_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: pushover
+                      key: user
+                - name: PUSHOVER_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: pushover
+                      key: token
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 64Mi
+                limits:
+                  memory: 128Mi
+          volumes:
+            - name: scripts
+              configMap:
+                name: alerts-watch
