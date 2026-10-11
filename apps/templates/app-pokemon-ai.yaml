@@ -42,7 +42,6 @@ metadata:
 data:
   openrouter-api-key: {{ .Values.pokemon_ai.openrouter_api_key | b64enc | quote }}
   pokemon-api-key: {{ .Values.pokemon_ai.pokemon_api_key | b64enc | quote }}
-  app-password: {{ .Values.pokemon_ai.app_password | b64enc | quote }}
   db-password: {{ .Values.pokemon_ai.db_password | b64enc | quote }}
   owner-password: {{ .Values.pokemon_ai.owner_password | b64enc | quote }}
 ---
@@ -136,11 +135,6 @@ spec:
                 secretKeyRef:
                   name: api-secret
                   key: openrouter-api-key
-            - name: APP_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: api-secret
-                  key: app-password
             - name: APP_OWNER_PASSWORD
               valueFrom:
                 secretKeyRef:
