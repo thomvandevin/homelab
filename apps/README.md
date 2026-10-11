@@ -151,7 +151,6 @@ pushover:
 pokemon_ai:
   openrouter_api_key: "sk-or-..."
   pokemon_api_key: "pk_..."
-  app_password: "..."
   db_password: "..."
   owner_password: "..."
 gcr:
