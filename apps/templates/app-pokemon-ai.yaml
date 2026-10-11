@@ -101,6 +101,18 @@ spec:
               ALTER ROLE pokemon_ai WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD :'pw';
               ALTER DATABASE pokemon_ai OWNER TO pokemon_ai;
               SQL
+              # Objects an earlier version left behind as postgres would block Flyway; hand them to the app role.
+              # ($do$ rather than $: Kubernetes turns $ in container args into a single $.)
+              $PG -v ON_ERROR_STOP=1 -d pokemon_ai <<'SQL'
+              DO $do$ DECLARE r record; BEGIN
+                FOR r IN SELECT tablename AS n FROM pg_tables WHERE schemaname = 'public' AND tableowner <> 'pokemon_ai' LOOP
+                  EXECUTE format('ALTER TABLE public.%I OWNER TO pokemon_ai', r.n);
+                END LOOP;
+                FOR r IN SELECT sequencename AS n FROM pg_sequences WHERE schemaname = 'public' AND sequenceowner <> 'pokemon_ai' LOOP
+                  EXECUTE format('ALTER SEQUENCE public.%I OWNER TO pokemon_ai', r.n);
+                END LOOP;
+              END $do$;
+              SQL
           env:
             - name: DB_ADMIN_PASSWORD
               valueFrom:
