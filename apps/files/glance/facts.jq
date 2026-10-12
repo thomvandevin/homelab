@@ -92,11 +92,13 @@ def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cer
       ready: (.status.readyReplicas // .status.numberReady // 0),
       desired: (if $kind == "DaemonSet" then .status.desiredNumberScheduled else .spec.replicas end // 0),
       restarts: ([$own[].status.containerStatuses[]?.restartCount] | sum),
+      lastRestart: ([$own[].status.containerStatuses[]?.lastState.terminated.finishedAt | select(. != null)] | max),
       nodes: ([$own[].spec.nodeName] | unique | map(select(. != null)) | map(sub("^homelab-"; "")) | join(",")),
       age: (.metadata.creationTimestamp | age),
       url: (.metadata.annotations["thomvandev.in/url"] // null),
       icon: (.metadata.annotations["glance/icon"] // null)
-    })) as $workloadRows
+    } | .recentRestart = (.lastRestart != null and now - (.lastRestart | fromdateiso8601) < 86400)
+      | .lastRestart |= age)) as $workloadRows
 | ($workloadRows | map(.namespace) | unique) as $namespaces
 | ($namespaces | map(
     . as $ns
@@ -112,6 +114,7 @@ def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cer
       ready: ($wl | map(.ready) | sum),
       desired: ($wl | map(.desired) | sum),
       restarts: ($wl | map(.restarts) | sum),
+      recentRestart: ($wl | any(.recentRestart)),
       podsRunning: ($np | map(select(.status.phase == "Running")) | length),
       podsTotal: ($np | length),
       argocd: argo_for($ns),
@@ -159,7 +162,7 @@ def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cer
     }) | sort_by(.name)),
   apps: ($apps | map(select(.system | not)) | sort_by((.own | not), .name)),
   platform: ($apps | map(select(.system)) | sort_by(.name)),
-  workloads: ($workloadRows | sort_by(-.restarts, .namespace, .name)),
+  workloads: ($workloadRows | sort_by((.recentRestart | not), -.restarts, .namespace, .name)),
   cronjobs: ($cronjobs[0].items | map({
     namespace: .metadata.namespace, name: .metadata.name, schedule: .spec.schedule,
     suspended: (.spec.suspend == true),

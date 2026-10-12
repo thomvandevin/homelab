@@ -145,6 +145,14 @@ pushover:
   scraper:
     user: "user-key"
     token: "app-token"
+  homelab:
+    user: "user-key"
+    token: "app-token"
+pokemon_ai:
+  openrouter_api_key: "sk-or-..."
+  pokemon_api_key: "pk_..."
+  db_password: "..."
+  owner_password: "..."
 gcr:
   scraper: "base64-encoded-dockerconfigjson"
   swiss_rounds: "base64-encoded-dockerconfigjson"

@@ -136,17 +136,24 @@
     {
       enable = true;
       role = meta.role;
-    }
-    (lib.mkIf (meta.role == "server") {
-      clusterInit = true;
-      # etcd and the API server share this node with pods that have no CPU
-      # limits; keep a slice of the node for them
+      # there is no swap, so the kubelet must evict before the kernel runs out;
+      # setting one hard threshold zeroes the unset ones, so all are listed
       extraKubeletConfig = {
         systemReserved = {
           cpu = "500m";
           memory = "1Gi";
         };
+        evictionHard = {
+          "memory.available" = "500Mi";
+          "nodefs.available" = "10%";
+          "nodefs.inodesFree" = "5%";
+          "imagefs.available" = "15%";
+          "imagefs.inodesFree" = "5%";
+        };
       };
+    }
+    (lib.mkIf (meta.role == "server") {
+      clusterInit = true;
       extraFlags = toString [
         "--write-kubeconfig-mode \"0644\""
         "--disable servicelb"
@@ -190,6 +197,7 @@
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL0dyepv7Mynvj4EqLWfM0DtAz20ZI8+AfU/qhHiAsXP thomvandevin@thomvandevin-macbook.local"
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBR653yMYwe9MQkwYTR0QUQu1cFAcgzxKIGqd6iIlz1o tvandevin@LMAC-N6CFJ7CWGC"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBCwVdk8rESs6g0+PGHDupz2ZyVePs7j2XQACRksX5JP workspace"
     ];
   };
 

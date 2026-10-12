@@ -41,7 +41,7 @@ spec:
       containers:
         # The minio/mc image is not publicly pullable; the AWS CLI speaks S3 to MinIO just as well.
         - name: aws
-          image: amazon/aws-cli:2.37.11@sha256:d55d5b391f1cc0d428a05eb07408bb1a730d7df9f656008f1117ed5e13b0c083
+          image: amazon/aws-cli:2.37.12@sha256:ce44b800602264c12298bbf3399055a4cefdb9ed4a098abe564afe26e7071bce
           command: ["sh", "-c"]
           args:
             - |
@@ -119,9 +119,9 @@ spec:
           requests:
             cpu: 20m
             memory: 96Mi
-        # two workers with twelve threads and 16 GB each; memory requests below
-        # keep it to about three jobs per worker
-        concurrent: 5
+        # the job memory requests below fit about three jobs on the workers next
+        # to the apps; more jobs queue in GitLab instead of as Pending pods
+        concurrent: 3
         rbac:
           create: true
         runners:
@@ -145,17 +145,19 @@ spec:
                 # load of 218 on four cores and evicted matter-server
                 cpu_request = "250m"
                 cpu_limit = "2000m"
-                memory_request = "1536Mi"
-                memory_limit = "6Gi"
+                # requests close to the limits so a burst of jobs cannot
+                # overcommit a worker's memory (no swap)
+                memory_request = "3Gi"
+                memory_limit = "4Gi"
                 service_cpu_request = "100m"
                 service_cpu_limit = "1000m"
-                service_memory_request = "512Mi"
-                service_memory_limit = "3Gi"
+                service_memory_request = "1536Mi"
+                service_memory_limit = "2Gi"
                 helper_cpu_request = "50m"
                 helper_cpu_limit = "200m"
                 helper_memory_request = "128Mi"
                 # a job pod may wait for room rather than fail the job after three minutes
-                poll_timeout = 600
+                poll_timeout = 1800
                 # CI jobs never run on the control plane; a job waits for a worker
                 # (poll_timeout) rather than landing next to etcd
                 [runners.kubernetes.node_selector]

@@ -46,6 +46,17 @@ data:
 ---
 apiVersion: v1
 kind: Secret
+type: Opaque
+metadata:
+  name: slowpoke-admin-secret
+  namespace: slowpoke-bingo
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  password: {{ .Values.slowpoke_bingo.admin_password | b64enc | quote }}
+---
+apiVersion: v1
+kind: Secret
 type: kubernetes.io/dockerconfigjson
 metadata:
   name: gitlab-registry-secret

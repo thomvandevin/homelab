@@ -1,0 +1,103 @@
+# Nightly dumps of every database except the PTCGL mirror (it re-syncs from Rainier each night) to the RustFS
+# bucket `backups`, one folder per day, kept for 14 days. Each database is a compressed custom-format dump, so one
+# database can be restored on its own; the roles go along as plain SQL.
+#
+# Restore one database into a scratch copy (from any pod with psql and the aws cli, or in two steps):
+#   aws --endpoint-url http://rustfs.ptcgl.svc.cluster.local:9000 s3 cp s3://backups/2026-10-11/pokemon_api.dump /tmp/
+#   createdb -h postgresql.db-system.svc.cluster.local -U postgres pokemon_api_restore
+#   pg_restore -h postgresql.db-system.svc.cluster.local -U postgres -d pokemon_api_restore --no-owner /tmp/pokemon_api.dump
+# Checked on 2026-10-10: pokemon_api restored from the first backup into a scratch database, all 15 tables with the same
+# row counts as the live database (cards 21,329, rulings 1,838, card_legality 41,837).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-backup
+  namespace: db-system
+spec:
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          initContainers:
+            - name: dump
+              image: postgres:17-alpine
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  export PGHOST=postgresql.db-system.svc.cluster.local PGUSER=postgres
+                  day=$(date -u +%F)
+                  mkdir -p "/backup/$day"
+                  echo "$day" > /backup/DAY
+                  pg_dumpall --globals-only > "/backup/$day/roles.sql"
+                  for db in $(psql -At -c "SELECT datname FROM pg_database WHERE NOT datistemplate AND datname NOT IN ('postgres', 'ptcgl') ORDER BY 1"); do
+                    pg_dump -Fc -Z 6 "$db" > "/backup/$day/$db.dump"
+                    echo "$db: $(du -h "/backup/$day/$db.dump" | cut -f1)"
+                  done
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-secret
+                      key: password
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+          containers:
+            - name: upload
+              image: amazon/aws-cli:2.37.12@sha256:ce44b800602264c12298bbf3399055a4cefdb9ed4a098abe564afe26e7071bce
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  E=http://rustfs.ptcgl.svc.cluster.local:9000
+                  day=$(cat /backup/DAY)
+                  old=$(date -u -d "$day -14 days" +%F)
+                  aws --endpoint-url $E s3api head-bucket --bucket backups 2>/dev/null || aws --endpoint-url $E s3api create-bucket --bucket backups
+                  aws --endpoint-url $E s3 cp --recursive --only-show-errors "/backup/$day" "s3://backups/$day/"
+                  aws --endpoint-url $E s3 rm --recursive --only-show-errors "s3://backups/$old/" || true
+                  echo "uploaded $day ($(du -sh /backup/$day | cut -f1)), removed $old"
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-backup-s3
+                      key: access-key
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-backup-s3
+                      key: secret-key
+                - name: AWS_DEFAULT_REGION
+                  value: us-east-1
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  memory: 512Mi
+          volumes:
+            - name: backup
+              emptyDir:
+                sizeLimit: 4Gi
+---
+# RustFS lives in the ptcgl namespace; the dump job needs its keys here.
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-backup-s3
+  namespace: db-system
+data:
+  access-key: {{ .Values.ptcgl.s3_access_key | b64enc | quote }}
+  secret-key: {{ .Values.ptcgl.s3_secret_key | b64enc | quote }}
