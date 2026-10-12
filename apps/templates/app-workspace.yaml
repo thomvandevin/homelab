@@ -69,6 +69,8 @@ data:
   # Scheduled runs that need attention notify through the homelab Pushover channel
   PUSHOVER_USER: {{ .Values.pushover.homelab.user | b64enc | quote }}
   PUSHOVER_TOKEN: {{ .Values.pushover.homelab.token | b64enc | quote }}
+  HASS_TOKEN: {{ .Values.workspace.homeAssistantToken | b64enc | quote }}
+  HASS_SERVER: {{ "http://home-assistant.home-assistant.svc.cluster.local:8080" | b64enc | quote }}
 ---
 apiVersion: v1
 kind: Secret
