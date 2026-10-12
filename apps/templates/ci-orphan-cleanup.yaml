@@ -1,0 +1,101 @@
+# Deletes CI job pods whose GitLab job has already finished. A runner loses track
+# of its pods when a node freezes or reboots, and the kubelet then starts them
+# again with nobody watching. A pod is only deleted when GitLab says its job is
+# done; an unknown or unreachable job keeps its pod.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ci-orphan-cleanup
+  namespace: gitlab-runner
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ci-orphan-cleanup
+  namespace: gitlab-runner
+type: Opaque
+data:
+  gitlab-token: {{ (default dict .Values.glance).gitlab_token | default "" | b64enc | quote }}
+{{- range $ns := list "gitlab-runner" "gitlab-runner-swiss-rounds" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ci-orphan-cleanup
+  namespace: {{ $ns }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ci-orphan-cleanup
+  namespace: {{ $ns }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ci-orphan-cleanup
+subjects:
+  - kind: ServiceAccount
+    name: ci-orphan-cleanup
+    namespace: gitlab-runner
+{{- end }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ci-orphan-cleanup
+  namespace: gitlab-runner
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 300
+      template:
+        spec:
+          serviceAccountName: ci-orphan-cleanup
+          restartPolicy: Never
+          containers:
+            - name: cleanup
+              image: alpine/k8s:1.37.1@sha256:712dc5385d1c1a3f83b747fa9e40f64d433a97f72ff42f9755ff7dd1f62846e4
+              env:
+                # jq's fromdateiso8601 reads the timestamp in the local zone
+                - name: TZ
+                  value: UTC
+                - name: GITLAB_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: ci-orphan-cleanup
+                      key: gitlab-token
+              command: ["sh", "-c"]
+              args:
+                - |
+                  for ns in gitlab-runner gitlab-runner-swiss-rounds; do
+                    # pods younger than 10 minutes are skipped: their job may not show as running yet
+                    kubectl -n "$ns" get pods -o json | jq -r '.items[]
+                      | select(.metadata.annotations["job.runner.gitlab.com/url"])
+                      | select(now - (.metadata.creationTimestamp | fromdateiso8601) > 600)
+                      | "\(.metadata.name) \(.metadata.annotations["job.runner.gitlab.com/url"])"' |
+                    while read -r pod url; do
+                      path=$(echo "$url" | sed -E 's#^https://gitlab.com/(.*)/-/jobs/[0-9]+$#\1#' | sed 's#/#%2F#g')
+                      id=${url##*/}
+                      status=$(curl -fsS -m 20 -H "PRIVATE-TOKEN: $GITLAB_TOKEN" "https://gitlab.com/api/v4/projects/$path/jobs/$id" | jq -r '.status // empty') || continue
+                      case "$status" in
+                        success|failed|canceled|skipped)
+                          echo "$ns/$pod: job $id is $status, deleting"
+                          kubectl -n "$ns" delete pod "$pod" --wait=false ;;
+                      esac
+                    done
+                  done
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 128Mi
