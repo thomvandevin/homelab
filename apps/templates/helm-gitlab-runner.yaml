@@ -142,12 +142,14 @@ spec:
                 # load of 218 on four cores and evicted matter-server
                 cpu_request = "250m"
                 cpu_limit = "2000m"
-                memory_request = "1536Mi"
-                memory_limit = "6Gi"
+                # requests close to the limits so a burst of jobs cannot
+                # overcommit a worker's memory (no swap)
+                memory_request = "3Gi"
+                memory_limit = "4Gi"
                 service_cpu_request = "100m"
                 service_cpu_limit = "1000m"
-                service_memory_request = "512Mi"
-                service_memory_limit = "3Gi"
+                service_memory_request = "1536Mi"
+                service_memory_limit = "2Gi"
                 helper_cpu_request = "50m"
                 helper_cpu_limit = "200m"
                 helper_memory_request = "128Mi"

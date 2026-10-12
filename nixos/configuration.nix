@@ -136,17 +136,24 @@
     {
       enable = true;
       role = meta.role;
-    }
-    (lib.mkIf (meta.role == "server") {
-      clusterInit = true;
-      # etcd and the API server share this node with pods that have no CPU
-      # limits; keep a slice of the node for them
+      # there is no swap, so the kubelet must evict before the kernel runs out;
+      # setting one hard threshold zeroes the unset ones, so all are listed
       extraKubeletConfig = {
         systemReserved = {
           cpu = "500m";
           memory = "1Gi";
         };
+        evictionHard = {
+          "memory.available" = "500Mi";
+          "nodefs.available" = "10%";
+          "nodefs.inodesFree" = "5%";
+          "imagefs.available" = "15%";
+          "imagefs.inodesFree" = "5%";
+        };
       };
+    }
+    (lib.mkIf (meta.role == "server") {
+      clusterInit = true;
       extraFlags = toString [
         "--write-kubeconfig-mode \"0644\""
         "--disable servicelb"
