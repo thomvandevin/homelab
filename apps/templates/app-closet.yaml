@@ -70,7 +70,7 @@ metadata:
 data:
   .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
 ---
-# -- MinIO (object storage for garment photos, used from milestone 05) ---------
+# -- MinIO (replaced by RustFS below; kept as a fallback until it is removed) ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -262,15 +262,16 @@ spec:
     - hosts:
         - closet-storage
 ---
-# Copies the closet bucket from MinIO; idempotent, runs after every sync until
-# MinIO is removed. The runner cache is not copied: it rebuilds itself.
+# Copies the closet bucket from MinIO before every sync, so uploads made before
+# the switch reach RustFS; idempotent, removed together with MinIO. The runner
+# cache is not copied: it rebuilds itself.
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: closet-bucket-copy
   namespace: closet
   annotations:
-    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook: PreSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   backoffLimit: 3
@@ -415,7 +416,7 @@ spec:
             - name: MAIL_FROM
               value: closet@thomvandev.in
             - name: S3_ENDPOINT
-              value: http://minio-svc.closet.svc.cluster.local:9000
+              value: http://rustfs.closet.svc.cluster.local:9000
             - name: S3_BUCKET
               value: closet
             - name: S3_ACCESS_KEY
