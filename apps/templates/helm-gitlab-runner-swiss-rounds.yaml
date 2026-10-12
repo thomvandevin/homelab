@@ -50,7 +50,7 @@ spec:
         gitlabUrl: https://gitlab.com
         # shares the workers with the closet runner; chart default of 10 is what
         # allowed a dozen job pods at once
-        concurrent: 3
+        concurrent: 1
         rbac:
           create: true
         runners:
@@ -72,6 +72,7 @@ spec:
                 helper_cpu_request = "50m"
                 helper_cpu_limit = "200m"
                 helper_memory_request = "128Mi"
+                poll_timeout = 1800
                 # CI jobs never run on the control plane; a job waits for a worker
                 # (poll_timeout) rather than landing next to etcd
                 [runners.kubernetes.node_selector]
