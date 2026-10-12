@@ -175,6 +175,19 @@
     })
   ];
 
+  # Without swap, a node short on memory thrashes on page cache instead of
+  # OOM-killing, and the kubelet sees that cache as available, so it never
+  # evicts. systemd-oomd watches memory pressure on the pod QoS slices and kills
+  # the pod with the most reclaim activity once pressure stays above the limit.
+  # Drop-ins, because the kubelet creates these slices itself.
+  systemd.slices = lib.genAttrs [ "kubepods-burstable" "kubepods-besteffort" ] (_: {
+    overrideStrategy = "asDropin";
+    sliceConfig = {
+      ManagedOOMMemoryPressure = "kill";
+      ManagedOOMMemoryPressureLimit = "60%";
+    };
+  });
+
   services.openiscsi = {
     enable = true;
     name = "iqn.2016-04.com.open-iscsi:${meta.hostname}";
