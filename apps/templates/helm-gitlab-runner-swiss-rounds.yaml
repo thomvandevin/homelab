@@ -66,7 +66,7 @@ spec:
                 privileged = false
                 cpu_request = "100m"
                 cpu_limit = "2000m"
-                memory_request = "512Mi"
+                memory_request = "1536Mi"
                 # kaniko holds whole image layers in memory during a build
                 memory_limit = "3Gi"
                 helper_cpu_request = "50m"
