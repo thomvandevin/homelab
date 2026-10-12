@@ -155,14 +155,15 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: rustfs-data
+  name: rustfs-storage
   namespace: closet
 spec:
   accessModes: ["ReadWriteOnce"]
   storageClassName: longhorn
   resources:
     requests:
-      storage: 20Gi
+      # what Longhorn can place next to MinIO's volume; grow it once MinIO is gone
+      storage: 10Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -221,7 +222,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: rustfs-data
+            claimName: rustfs-storage
 ---
 apiVersion: v1
 kind: Service
