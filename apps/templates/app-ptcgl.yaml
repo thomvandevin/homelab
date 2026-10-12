@@ -54,11 +54,12 @@ spec:
           image: rustfs/rustfs:1.0.1
           ports:
             - containerPort: 9000
+            - containerPort: 9001
           env:
             - name: RUSTFS_VOLUMES
               value: /data
             - name: RUSTFS_CONSOLE_ENABLE
-              value: "false"
+              value: "true"
             - name: RUSTFS_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
@@ -96,8 +97,34 @@ spec:
   selector:
     app: rustfs
   ports:
-    - port: 9000
+    - name: api
+      port: 9000
       targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+# Bucket browser on the tailnet
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ptcgl-storage
+  namespace: ptcgl
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: rustfs
+                port:
+                  number: 9001
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - ptcgl-storage
 ---
 # -- Mirror sync (github.com/zwolsman/ptcgl.dev) -------------------------------
 # The init containers are idempotent and run before every sync. seed-auth writes the SOPS token only when
