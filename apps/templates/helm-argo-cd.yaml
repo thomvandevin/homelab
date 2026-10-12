@@ -39,6 +39,10 @@ spec:
               https
 
         repoServer:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 320Mi
           env:
             - name: HELM_PLUGINS
               value: /gitops-tools/helm-plugins/
@@ -143,6 +147,10 @@ spec:
           metrics: *metrics
         controller:
           metrics: *metrics
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
         applicationSet:
           metrics: *metrics
         notifications:

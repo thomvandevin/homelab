@@ -132,10 +132,8 @@ spec:
               subPath: glance.yml
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              memory: 256Mi
+              cpu: 5m
+              memory: 32Mi
           readinessProbe:
             httpGet:
               path: /api/healthz
@@ -151,8 +149,8 @@ spec:
               mountPath: /data
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
+              cpu: 100m
+              memory: 128Mi
             limits:
               memory: 256Mi
         - name: facts-http

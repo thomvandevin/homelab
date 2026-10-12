@@ -103,10 +103,10 @@ spec:
             periodSeconds: 10
           resources:
             requests:
-              cpu: 100m
-              memory: 384Mi
+              cpu: 10m
+              memory: 128Mi
             limits:
-              memory: 768Mi
+              memory: 256Mi
 ---
 apiVersion: v1
 kind: Service
@@ -146,7 +146,6 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
           restartPolicy: OnFailure
 ---
@@ -174,7 +173,6 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
           restartPolicy: OnFailure
 ---
@@ -204,7 +202,6 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
           restartPolicy: OnFailure
 ---
@@ -232,7 +229,6 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
           restartPolicy: OnFailure
 ---
@@ -272,7 +268,6 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
           restartPolicy: OnFailure
 ---
@@ -302,7 +297,6 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
           restartPolicy: OnFailure
 ---
@@ -330,6 +324,5 @@ spec:
                   cpu: 50m
                   memory: 64Mi
                 limits:
-                  cpu: 100m
                   memory: 128Mi
           restartPolicy: OnFailure
