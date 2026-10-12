@@ -39,14 +39,14 @@ spec:
     spec:
       restartPolicy: OnFailure
       containers:
-        # The minio/mc image is not publicly pullable; the AWS CLI speaks S3 to MinIO just as well.
+        # The minio/mc image is not publicly pullable; the AWS CLI speaks S3 to RustFS just as well.
         - name: aws
           image: amazon/aws-cli:2.37.12@sha256:ce44b800602264c12298bbf3399055a4cefdb9ed4a098abe564afe26e7071bce
           command: ["sh", "-c"]
           args:
             - |
               export AWS_ACCESS_KEY_ID="$ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$SECRET_KEY" AWS_DEFAULT_REGION=us-east-1
-              endpoint=http://minio-svc.closet.svc.cluster.local:9000
+              endpoint=http://rustfs.closet.svc.cluster.local:9000
               aws --endpoint-url "$endpoint" s3api head-bucket --bucket gitlab-runner-cache \
                 || aws --endpoint-url "$endpoint" s3 mb s3://gitlab-runner-cache
           env:
@@ -184,10 +184,10 @@ spec:
                 Path = "gitlab-runner"
                 Shared = true
                 [runners.cache.s3]
-                  ServerAddress = "minio-svc.closet.svc.cluster.local:9000"
+                  ServerAddress = "rustfs.closet.svc.cluster.local:9000"
                   BucketName = "gitlab-runner-cache"
                   BucketLocation = "us-east-1"
-                  # in-cluster MinIO speaks plain HTTP
+                  # the in-cluster S3 store speaks plain HTTP
                   Insecure = true
   destination:
     namespace: gitlab-runner
