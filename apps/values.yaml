@@ -27,6 +27,7 @@ workspace:
     pokemon-cardmarket-extension: git@gitlab.com:thomvandevin-projects/pokemon-cardmarket-extension.git
     pokemon-index: git@gitlab.com:thomvandevin-projects/pokemon-index.git
     rotom-ui: git@gitlab.com:thomvandevin-projects/rotom-ui.git
+    home-assistant: git@gitlab.com:thomvandevin-projects/home-assistant.git
     scraper: git@gitlab.com:thomvandevin-projects/scraper.git
     slowpoke-bingo: git@gitlab.com:thomvandevin-projects/slowpoke-bingo.git
     thomvandev.in: git@gitlab.com:thomvandevin-projects/thomvandev.in.git
