@@ -71,3 +71,34 @@ spec:
   destination:
     namespace: home-assistant
     server: https://kubernetes.default.svc
+---
+# The home-assistant repo's CI publishes its directories as these ConfigMaps;
+# Home Assistant mounts them read-only under /config/repo
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: home-assistant-repo-publisher
+  namespace: home-assistant
+rules:
+  # create cannot be limited by name; only the named ones are mounted
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["ha-repo-automations", "ha-repo-scenes", "ha-repo-scripts", "ha-repo-dashboards"]
+    verbs: ["get", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-home-assistant-repo
+  namespace: home-assistant
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: home-assistant-repo-publisher
+  apiGroup: rbac.authorization.k8s.io
