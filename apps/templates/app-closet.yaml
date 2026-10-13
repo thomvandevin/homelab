@@ -81,8 +81,7 @@ spec:
   storageClassName: longhorn
   resources:
     requests:
-      # what Longhorn can place next to MinIO's volume; grow it once MinIO is gone
-      storage: 10Gi
+      storage: 20Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
