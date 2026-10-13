@@ -33,17 +33,61 @@ spec:
         configuration:
           enabled: true
           forceInit: true
-          # Chart default minus the http block: HTTP/trusted_proxies config is
-          # UI-managed (Settings > System > Network) and YAML support is removed in 2027.2.0
+          # The chart's default merges the template into the existing file with yq,
+          # which keeps stale keys and their old YAML tags; this template is the
+          # whole configuration, so it overwrites (keeping timestamped backups)
+          initScript: |-
+            #!/bin/bash
+            set -e
+            if [ -f /config/configuration.yaml ]; then
+              cp /config/configuration.yaml "/config/configuration.yaml.$(date +%Y%m%d_%H%M%S)"
+              ls -t /config/configuration.yaml.2* 2>/dev/null | tail -n +11 | xargs -r rm
+            fi
+            cp /config-templates/configuration.yaml /config/configuration.yaml
+          # No http block: HTTP/trusted_proxies config is UI-managed
+          # (Settings > System > Network) and YAML support is removed in 2027.2.0
           templateConfig: |-
             default_config:
 
             frontend:
               themes: !include_dir_merge_named themes
 
-            automation: !include automations.yaml
-            script: !include scripts.yaml
-            scene: !include scenes.yaml
+            # automations, scenes, scripts, template entities and dashboards come
+            # from the private home-assistant repo, published by its CI as the
+            # ha-repo-* ConfigMaps
+            automation: !include_dir_merge_list repo/automations
+            script: !include_dir_merge_named repo/scripts
+            scene: !include_dir_merge_list repo/scenes
+            template: !include_dir_merge_list repo/templates
+
+            lovelace:
+              dashboards:
+                thom-desktop:
+                  mode: yaml
+                  title: Thom desktop
+                  icon: mdi:monitor-dashboard
+                  show_in_sidebar: false
+                  require_admin: true
+                  filename: repo/dashboards/thom-desktop.yaml
+                thom-mobile:
+                  mode: yaml
+                  title: Thom mobile
+                  icon: mdi:cellphone
+                  show_in_sidebar: false
+                  require_admin: true
+                  filename: repo/dashboards/thom-mobile.yaml
+                wall-panel:
+                  mode: yaml
+                  title: Wallpanel
+                  icon: mdi:tablet-dashboard
+                  show_in_sidebar: false
+                  filename: repo/dashboards/wall-panel.yaml
+                alies-mobile:
+                  mode: yaml
+                  title: Alies mobile
+                  icon: mdi:cellphone-heart
+                  show_in_sidebar: false
+                  filename: repo/dashboards/alies-mobile.yaml
         persistence:
           enabled: true
         hostNetwork: true
@@ -64,9 +108,45 @@ spec:
             hostPath:
               path: /run/dbus
               type: Directory
+          # optional: without them Home Assistant still starts, only without the repo's files
+          - name: ha-repo-automations
+            configMap:
+              name: ha-repo-automations
+              optional: true
+          - name: ha-repo-scenes
+            configMap:
+              name: ha-repo-scenes
+              optional: true
+          - name: ha-repo-scripts
+            configMap:
+              name: ha-repo-scripts
+              optional: true
+          - name: ha-repo-templates
+            configMap:
+              name: ha-repo-templates
+              optional: true
+          - name: ha-repo-dashboards
+            configMap:
+              name: ha-repo-dashboards
+              optional: true
         additionalMounts:
           - name: dbus
             mountPath: /run/dbus
+            readOnly: true
+          - name: ha-repo-automations
+            mountPath: /config/repo/automations
+            readOnly: true
+          - name: ha-repo-scenes
+            mountPath: /config/repo/scenes
+            readOnly: true
+          - name: ha-repo-scripts
+            mountPath: /config/repo/scripts
+            readOnly: true
+          - name: ha-repo-templates
+            mountPath: /config/repo/templates
+            readOnly: true
+          - name: ha-repo-dashboards
+            mountPath: /config/repo/dashboards
             readOnly: true
   destination:
     namespace: home-assistant
@@ -86,7 +166,7 @@ rules:
     verbs: ["create"]
   - apiGroups: [""]
     resources: ["configmaps"]
-    resourceNames: ["ha-repo-automations", "ha-repo-scenes", "ha-repo-scripts", "ha-repo-dashboards"]
+    resourceNames: ["ha-repo-automations", "ha-repo-scenes", "ha-repo-scripts", "ha-repo-templates", "ha-repo-dashboards"]
     verbs: ["get", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
