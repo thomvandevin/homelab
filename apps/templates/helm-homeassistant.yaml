@@ -41,40 +41,9 @@ spec:
             frontend:
               themes: !include_dir_merge_named themes
 
-            # automations, scenes, scripts and dashboards come from the private
-            # home-assistant repo, published by its CI as the ha-repo-* ConfigMaps
-            automation: !include_dir_merge_list repo/automations
-            script: !include_dir_merge_named repo/scripts
-            scene: !include_dir_merge_list repo/scenes
-
-            lovelace:
-              dashboards:
-                thom-desktop:
-                  mode: yaml
-                  title: Thom desktop
-                  icon: mdi:monitor-dashboard
-                  show_in_sidebar: false
-                  require_admin: true
-                  filename: repo/dashboards/thom-desktop.yaml
-                thom-mobile:
-                  mode: yaml
-                  title: Thom mobile
-                  icon: mdi:cellphone
-                  show_in_sidebar: false
-                  require_admin: true
-                  filename: repo/dashboards/thom-mobile.yaml
-                wall-panel:
-                  mode: yaml
-                  title: Wallpanel
-                  icon: mdi:tablet-dashboard
-                  show_in_sidebar: false
-                  filename: repo/dashboards/wall-panel.yaml
-                alies-mobile:
-                  mode: yaml
-                  title: Alies mobile
-                  icon: mdi:cellphone-heart
-                  show_in_sidebar: false
-                  filename: repo/dashboards/alies-mobile.yaml
+            automation: !include automations.yaml
+            script: !include scripts.yaml
+            scene: !include scenes.yaml
         persistence:
           enabled: true
         hostNetwork: true
@@ -95,38 +64,9 @@ spec:
             hostPath:
               path: /run/dbus
               type: Directory
-          # optional: without them Home Assistant still starts, only without the repo's files
-          - name: ha-repo-automations
-            configMap:
-              name: ha-repo-automations
-              optional: true
-          - name: ha-repo-scenes
-            configMap:
-              name: ha-repo-scenes
-              optional: true
-          - name: ha-repo-scripts
-            configMap:
-              name: ha-repo-scripts
-              optional: true
-          - name: ha-repo-dashboards
-            configMap:
-              name: ha-repo-dashboards
-              optional: true
         additionalMounts:
           - name: dbus
             mountPath: /run/dbus
-            readOnly: true
-          - name: ha-repo-automations
-            mountPath: /config/repo/automations
-            readOnly: true
-          - name: ha-repo-scenes
-            mountPath: /config/repo/scenes
-            readOnly: true
-          - name: ha-repo-scripts
-            mountPath: /config/repo/scripts
-            readOnly: true
-          - name: ha-repo-dashboards
-            mountPath: /config/repo/dashboards
             readOnly: true
   destination:
     namespace: home-assistant
