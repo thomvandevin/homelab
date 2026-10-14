@@ -66,14 +66,14 @@ spec:
                   mode: yaml
                   title: Thom desktop
                   icon: mdi:monitor-dashboard
-                  show_in_sidebar: false
+                  show_in_sidebar: true
                   require_admin: true
                   filename: repo/dashboards/thom-desktop.yaml
                 thom-mobile:
                   mode: yaml
                   title: Thom mobile
                   icon: mdi:cellphone
-                  show_in_sidebar: false
+                  show_in_sidebar: true
                   require_admin: true
                   filename: repo/dashboards/thom-mobile.yaml
                 wall-panel:
