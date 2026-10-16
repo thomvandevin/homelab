@@ -167,7 +167,7 @@ spec:
                 - name: shared
                   mountPath: /shared
             - name: create-db
-              image: postgres:17-alpine
+              image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
               command: ["sh", "-c"]
               args:
                 - |
@@ -180,7 +180,7 @@ spec:
                       name: ptcgl-secret
                       key: db-password
             - name: seed-auth
-              image: postgres:17-alpine
+              image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
               command: ["sh", "-c"]
               args:
                 - |
@@ -236,7 +236,7 @@ spec:
                   value: us-east-1
           containers:
             - name: sync
-              image: ghcr.io/zwolsman/ptcgl-sync:7415f01
+              image: ghcr.io/zwolsman/ptcgl-sync:7415f01@sha256:ab61a08b6ce337c5f2a0cae7c70c06a2bc55662116cc87b9e67424690f202c63
               command: ["sh", "-c"]
               args:
                 - exec java -jar /app/app.jar --sync --locale=en --rainier.app-version="$(cat /shared/version 2>/dev/null || echo 1.43.0)"
