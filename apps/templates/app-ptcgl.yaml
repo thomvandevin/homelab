@@ -51,7 +51,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rustfs
-          image: rustfs/rustfs:1.0.1
+          image: rustfs/rustfs:1.0.2@sha256:7e948dad4748bda48f8985fda7195f8cf2e4259427011f6120acc2c9acf51587
           ports:
             - containerPort: 9000
             - containerPort: 9001
