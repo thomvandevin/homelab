@@ -84,7 +84,7 @@ spec:
       {{- include "placement.homelab0" . | nindent 6 }}
       containers:
         - name: mongo
-          image: mongo:8.3@sha256:e147c6a3ec0d65e08552b8a17c584ad79c9c7152353d4675196b16b514e70e55
+          image: mongo:8.3@sha256:0e900a3364da37b76d642b73b0bba56bd4c6c509ab470cf700436fd866bee3ff
           args: ["--wiredTigerCacheSizeGB", "0.5"]
           ports:
             - containerPort: 27017
