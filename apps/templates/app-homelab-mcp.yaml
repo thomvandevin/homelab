@@ -72,6 +72,55 @@ subjects:
   - kind: ServiceAccount
     name: homelab-mcp
     namespace: homelab-mcp
+{{- if .Values.homelabMcp.write }}
+---
+# -- Write tools: rollout restarts and ArgoCD syncs, nothing else ---------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: homelab-mcp-restart
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    verbs: [patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: homelab-mcp-restart
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: homelab-mcp-restart
+subjects:
+  - kind: ServiceAccount
+    name: homelab-mcp
+    namespace: homelab-mcp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: homelab-mcp-sync
+  namespace: argocd
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: homelab-mcp-sync
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: homelab-mcp-sync
+subjects:
+  - kind: ServiceAccount
+    name: homelab-mcp
+    namespace: homelab-mcp
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -107,6 +156,8 @@ spec:
               value: {{ .Values.homelabMcp.accessTeamDomain | quote }}
             - name: ACCESS_AUD
               value: {{ .Values.homelabMcp.accessAud | quote }}
+            - name: MCP_WRITE
+              value: {{ .Values.homelabMcp.write | default false | quote }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
