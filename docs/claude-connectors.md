@@ -28,7 +28,9 @@ account. Connectors added on the web show up in the phone and desktop apps.
   app (`ACCESS_AUD`), so reaching the pod or the host port directly does not
   help.
 - **homelab-mcp** runs as a service account that can only `get`/`list` nodes,
-  pods and `pods/log`. No Secrets, no exec. **homelab-media-mcp** only holds the *arr,
+  pods and `pods/log`. No Secrets, no exec. It uses the node's network
+  (port 18080) because the mDNS scan behind `inventory` only sees LAN devices
+  from a node interface; no credentials are involved in that scan. **homelab-media-mcp** only holds the *arr,
   SABnzbd and Plex keys it reads from the media host's `.env`.
 
 To cut access at once: Zero Trust > My Team > Users > Revoke sessions, or

@@ -77,10 +77,11 @@ by its `facts-http` container; a ClusterIP Service `glance/glance-facts`
 exposes it, so the MCP does not re-derive the same data. The MCP's own
 ClusterRole is only `get`/`list` on nodes, pods and `pods/log`.
 
-Home Assistant device addresses (SLZB, HomeWizard, Sonos and the like) are
-not in phase 1: HA's REST API does not expose config entry hosts, so they
-arrive with the Home Assistant MCP in phase 3, or with a small HA template
-sensor if that proves insufficient.
+LAN devices (SLZB coordinator, HomeWizard P1 meter, Sonos, TV, printer,
+laptops and phones) come from an mDNS scan every 5 minutes: every service type
+the LAN announces plus a fixed list (`_slzb-06._tcp` and friends), grouped per
+host. It needs no Home Assistant token, which would have given a read-only
+server control over the house; the price is host networking for the pod.
 
 The router (Ziggo SmartWifi, Liberty Global RDK firmware) has no usable API
 for DHCP leases, so LAN devices that Home Assistant does not know about are
