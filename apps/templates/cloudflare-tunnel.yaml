@@ -114,6 +114,9 @@ spec:
             # Closet
             - hostname: closet.thomvandev.in
               service: http://closet-web-svc.closet.svc.cluster.local:80
+            # Claude connector; Cloudflare Access (managed OAuth) in front
+            - hostname: homelab-mcp.thomvandev.in
+              service: http://homelab-mcp.homelab-mcp.svc.cluster.local:80
   destination:
     namespace: cloudflare-tunnel
     server: https://kubernetes.default.svc

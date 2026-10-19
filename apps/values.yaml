@@ -79,3 +79,9 @@ workspace:
     - mcp-tunnels@claude-plugins-official
     - redis-development@claude-plugins-official
     - typescript-lsp@claude-plugins-official
+
+# Cloudflare Access application in front of homelab-mcp.thomvandev.in; the
+# server rejects any request whose Access JWT carries a different AUD
+homelabMcp:
+  accessTeamDomain: thomvandevin.cloudflareaccess.com
+  accessAud: e6f740de94f47818ceea12be07155cbdf0c15d4865f794c85a183a2469b9af99

@@ -198,3 +198,17 @@ spec:
     - name: http
       port: 80
       targetPort: http
+---
+# facts.json for other in-cluster readers (homelab-mcp)
+apiVersion: v1
+kind: Service
+metadata:
+  name: glance-facts
+  namespace: glance
+spec:
+  selector:
+    app: glance
+  ports:
+    - name: facts
+      port: 8081
+      targetPort: facts

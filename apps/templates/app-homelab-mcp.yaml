@@ -1,0 +1,137 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: homelab-mcp
+  labels:
+    name: homelab-mcp
+  annotations:
+    glance/icon: si:anthropic
+    argocd.argoproj.io/sync-wave: "0"
+---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: homelab-mcp-deployer
+  namespace: homelab-mcp
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-homelab-mcp-deploy
+  namespace: homelab-mcp
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: homelab-mcp-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: homelab-mcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
+---
+# -- What Claude can read: no Secrets, no exec, no writes ----------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: homelab-mcp
+  namespace: homelab-mcp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: homelab-mcp-read
+rules:
+  - apiGroups: [""]
+    resources: [nodes, pods, pods/log]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: homelab-mcp-read
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: homelab-mcp-read
+subjects:
+  - kind: ServiceAccount
+    name: homelab-mcp
+    namespace: homelab-mcp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homelab-mcp
+  namespace: homelab-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homelab-mcp
+  template:
+    metadata:
+      labels:
+        app: homelab-mcp
+    spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
+      serviceAccountName: homelab-mcp
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+      containers:
+        - name: homelab-mcp
+          image: registry.gitlab.com/thomvandevin-projects/homelab-mcp:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: ACCESS_TEAM_DOMAIN
+              value: {{ .Values.homelabMcp.accessTeamDomain | quote }}
+            - name: ACCESS_AUD
+              value: {{ .Values.homelabMcp.accessAud | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homelab-mcp
+  namespace: homelab-mcp
+spec:
+  selector:
+    app: homelab-mcp
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
