@@ -22,7 +22,7 @@ Home Assistant's built-in MCP server is the third upstream.
 claude.ai connector
   -> mcp.thomvandev.in (Cloudflare MCP portal, Access + managed OAuth)
        -> homelab-mcp  (k8s, ArgoCD)        cluster, inventory
-       -> media-mcp    (homelab-media, compose) *arr, SABnzbd, Plex
+       -> homelab-media-mcp (homelab-media, compose) *arr, SABnzbd, Plex
        -> Home Assistant /api/mcp (own OAuth)  entities exposed to Assist
 ```
 
@@ -50,7 +50,7 @@ Layered so that no single leaked value reaches the cluster.
 3. **Scoped identities inside.** `homelab-mcp` runs as its own service
    account with a read-only ClusterRole in the shape of `glance-facts`: no
    Secrets, no `pods/exec`. It never uses the workspace's cluster-admin
-   account. `media-mcp` only gets the *arr / SABnzbd / Plex keys, read from
+   account. `homelab-media-mcp` only gets the *arr / SABnzbd / Plex keys, read from
    the same `.env` the compose stack already uses.
 4. **Writes are opt-in.** Write tools only register when `MCP_WRITE=true`.
    They bind a second ClusterRole (`patch` on `deployments` for the restart
@@ -92,7 +92,7 @@ the homelab GitLab runner, deployed by an ArgoCD-managed template
 SDK (stateless streamable HTTP) and `go-oidc` for the Access JWT; one static
 binary on a distroless image.
 
-## media-mcp (phase 2, read-only)
+## homelab-media-mcp (phase 2, read-only)
 
 Runs as one more service in `homelab-media`'s `docker-compose.yml`, deployed
 by that repo's existing deploy script. Tools: `queue()` (Sonarr, Radarr,

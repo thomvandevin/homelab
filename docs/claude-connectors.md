@@ -6,7 +6,7 @@ Live homelab data in claude.ai (web, desktop, phone). Design and reasoning:
 | Connector URL | Server | Runs on | Tools |
 |---|---|---|---|
 | `https://homelab-mcp.thomvandev.in/mcp` | `homelab-mcp` (GitLab `thomvandevin-projects/homelab-mcp`) | cluster, `apps/templates/app-homelab-mcp.yaml` | `cluster_problems`, `inventory`, `cluster_facts`, `pod_status`, `pod_logs`; writes: `restart_deployment`, `argocd_sync` |
-| `https://media-mcp.thomvandev.in/mcp` | `media-mcp` (homelab-media `docker/media-mcp`) | homelab-media, Docker Compose | `media_health`, `media_queue`, `media_calendar`, `library_search`, `plex_now_playing`; writes: `sonarr_search`, `radarr_search` |
+| `https://homelab-media-mcp.thomvandev.in/mcp` | `homelab-media-mcp` (homelab-media `docker/homelab-media-mcp`) | homelab-media, Docker Compose | `media_health`, `media_queue`, `media_calendar`, `library_search`, `plex_now_playing`; writes: `sonarr_search`, `radarr_search` |
 | `https://homeassistant.thomvandev.in/api/mcp` | Home Assistant's built-in `mcp_server` | cluster, Home Assistant | entities exposed to Assist |
 
 ## Adding a connector
@@ -19,7 +19,7 @@ account. Connectors added on the web show up in the phone and desktop apps.
 
 ## How it is protected
 
-- **Cloudflare Access** apps `homelab-mcp` and `media-mcp` (Zero Trust >
+- **Cloudflare Access** apps `homelab-mcp` and `homelab-media-mcp` (Zero Trust >
   Access > Applications): Allow policy on the owner's email, one-time PIN
   login, managed OAuth with dynamic client registration for the claude.ai and
   claude.com callbacks and localhost (Claude Code). Access tokens live 15
@@ -28,7 +28,7 @@ account. Connectors added on the web show up in the phone and desktop apps.
   app (`ACCESS_AUD`), so reaching the pod or the host port directly does not
   help.
 - **homelab-mcp** runs as a service account that can only `get`/`list` nodes,
-  pods and `pods/log`. No Secrets, no exec. **media-mcp** only holds the *arr,
+  pods and `pods/log`. No Secrets, no exec. **homelab-media-mcp** only holds the *arr,
   SABnzbd and Plex keys it reads from the media host's `.env`.
 
 To cut access at once: Zero Trust > My Team > Users > Revoke sessions, or
@@ -41,9 +41,9 @@ Off by default; tools that write are not even listed while off.
 - **homelab-mcp**: `homelabMcp.write: true` in `apps/values.yaml`. This also
   renders the RBAC the writes need (`patch` on Deployments, `get`/`patch` on
   ArgoCD Applications) and removes it again when set back to `false`.
-- **media-mcp**: change `MEDIA_MCP_WRITE=${MEDIA_MCP_WRITE:-false}` to `true`
+- **homelab-media-mcp**: change `HOMELAB_MEDIA_MCP_WRITE=${HOMELAB_MEDIA_MCP_WRITE:-false}` to `true`
   in homelab-media's `docker/docker-compose.yml`, then
-  `docker compose up -d --no-deps media-mcp` on the host.
+  `docker compose up -d --no-deps homelab-media-mcp` on the host.
 
 Every write is logged with the tool and its arguments.
 
@@ -59,6 +59,6 @@ home-assistant repo.
 
 - homelab-mcp: push to `main` in its GitLab project; CI tests, builds and
   restarts the Deployment.
-- media-mcp: on the media host, `docker compose build media-mcp && docker
-  compose up -d --no-deps media-mcp` (`--no-deps` keeps Sonarr and Radarr
+- homelab-media-mcp: on the media host, `docker compose build homelab-media-mcp && docker
+  compose up -d --no-deps homelab-media-mcp` (`--no-deps` keeps Sonarr and Radarr
   running). The image build runs `go vet` and the tests.
