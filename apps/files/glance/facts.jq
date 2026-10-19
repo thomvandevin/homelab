@@ -168,7 +168,8 @@ def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cer
     suspended: (.spec.suspend == true),
     lastSchedule: (.status.lastScheduleTime | age),
     lastSuccess: (.status.lastSuccessfulTime | age),
-    ok: (.status.lastSuccessfulTime != null and (.status.lastScheduleTime == null or .status.lastSuccessfulTime >= .status.lastScheduleTime))
+    # a job that has never been scheduled yet has not failed either
+    ok: (.status.lastScheduleTime == null or (.status.lastSuccessfulTime != null and .status.lastSuccessfulTime >= .status.lastScheduleTime))
   }) | sort_by(.namespace, .name)),
   storage: {
     volumes: ($lhvolumes[0].items | map(

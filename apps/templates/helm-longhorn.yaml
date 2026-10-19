@@ -46,6 +46,10 @@ spec:
           guaranteedInstanceManagerCPU: 5
           # a pod whose node died is rescheduled instead of staying Terminating
           nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+          # replica data that no volume references any more (left by failed or
+          # moved replicas) filled homelab-2 past the 25% free minimum, so no
+          # replica could be rebuilt there and three volumes ran on one copy
+          orphanResourceAutoDeletion: replica-data;instance
   destination:
     namespace: longhorn-system
     server: https://kubernetes.default.svc
