@@ -159,15 +159,16 @@ spec:
           envFrom:
             - secretRef:
                 name: workspace-secret
-          # Sixteen idle sessions take about 4 GiB before any build runs; at the
-          # limit the pod stalls on reclaim instead of being killed, and every
-          # session drops its connection, so keep real headroom
+          # Sixteen idle sessions take about 4 GiB before any build runs. The
+          # limit must leave the rest of the node (about 14 GiB allocatable)
+          # to the other pods: at 10Gi the node ran out, the Longhorn iSCSI
+          # session timed out and the home volume was remounted read-only
           resources:
             requests:
               cpu: 500m
               memory: 6Gi
             limits:
-              memory: 10Gi
+              memory: 8Gi
           livenessProbe:
             exec:
               command: [pgrep, -x, sshd]
