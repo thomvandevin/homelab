@@ -114,6 +114,15 @@ separate connector at `https://homeassistant.thomvandev.in/api/mcp`.
 behind `MCP_WRITE=true` and the stricter Access app. Every write is logged
 with the Access identity.
 
+## Status (2026-10-19)
+
+Phases 1, 2 and 4 are live; writes ship switched off. Phase 3 needs the
+integration added in the HA UI. The MCP portal is not built: Home Assistant
+does its own OAuth and stays a separate connector anyway, so the portal would
+only merge two connectors into one, at the price of either a static Access
+service token for the upstreams or a dashboard login per upstream. Revisit
+when there are more servers. Operating notes: `docs/claude-connectors.md`.
+
 ## Docs (phase 5)
 
 `docs/claude-connectors.md`: how to add the portal URL as a custom connector
