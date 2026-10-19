@@ -139,6 +139,10 @@ spec:
     spec:
       {{- include "placement.preferWorkers" . | nindent 6 }}
       serviceAccountName: homelab-mcp
+      # mDNS multicast does not cross the pod network; LAN devices are only
+      # visible from the node's own interface
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
         - name: gitlab-registry-secret
       securityContext:
@@ -149,9 +153,13 @@ spec:
           image: registry.gitlab.com/thomvandevin-projects/homelab-mcp:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
+            - containerPort: 18080
               name: http
           env:
+            - name: LISTEN_ADDR
+              value: ":18080"
+            - name: LAN_SCAN
+              value: "true"
             - name: ACCESS_TEAM_DOMAIN
               value: {{ .Values.homelabMcp.accessTeamDomain | quote }}
             - name: ACCESS_AUD
