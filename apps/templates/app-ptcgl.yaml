@@ -150,7 +150,7 @@ spec:
             # The image pins a TCGL client version whose CDN content tree gets pruned after updates; find the newest
             # one that answers (falling back to the last known one) and hand it to the sync.
             - name: find-version
-              image: curlimages/curl:latest@sha256:a134550be58ab783810e613ae96fd253c38f7bdd16d9bf9be350700c7a29ac06
+              image: curlimages/curl:latest@sha256:11e64e28c5f58c8d93ee95fcf22ac055f48b0bc440e0ce7d8013bbb5ad6aa8ac
               command: ["/bin/sh", "-c"]
               args:
                 - |
