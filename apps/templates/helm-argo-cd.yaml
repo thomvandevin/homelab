@@ -107,7 +107,7 @@ spec:
                   value: "1.37.1"
                 # renovate: datasource=github-releases depName=helmfile/vals
                 - name: VALS_VERSION
-                  value: "0.47.0"
+                  value: "0.50.0"
                 # renovate: datasource=github-releases depName=getsops/sops
                 - name: SOPS_VERSION
                   value: "3.13.3"
