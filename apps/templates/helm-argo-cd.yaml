@@ -101,7 +101,7 @@ spec:
                 # every `secrets://` values file fails to render.
                 # renovate: datasource=github-releases depName=jkroepke/helm-secrets
                 - name: HELM_SECRETS_VERSION
-                  value: "4.7.9"
+                  value: "4.7.10"
                 # renovate: datasource=github-releases depName=kubernetes/kubernetes
                 - name: KUBECTL_VERSION
                   value: "1.37.1"
