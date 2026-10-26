@@ -96,6 +96,18 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s*\\n\\s*- name: \\S+\\s*\\n\\s*value: \"(?<currentValue>[^\"]+)\""
       ]
+    },
+    {
+      "description": "Image tags set in Helm valuesObject, which the argocd manager does not parse",
+      "customType": "regex",
+      "datasourceTemplate": "{{{datasource}}}",
+      "depNameTemplate": "{{{depName}}}",
+      "managerFilePatterns": [
+        "/apps/templates/.+\\.yaml$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>docker) depName=(?<depName>\\S+)\\s*\\n\\s*tag: \"(?<currentValue>[^\"@]+)(@(?<currentDigest>sha256:[a-f0-9]+))?\""
+      ]
     }
   ]
 }
