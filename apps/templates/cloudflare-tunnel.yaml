@@ -30,7 +30,7 @@ spec:
         # The chart is unmaintained and its appVersion default is 2024.8.3
         image:
           # renovate: datasource=docker depName=cloudflare/cloudflared
-          tag: "2026.10.4@sha256:4c72c1af2984a66a255efd20fc4ec73fe0f7267384b55315ad953b354b3361b4"
+          tag: "2026.10.5@sha256:85b1ec2fdc5b311d309abd268f70eef071a595f011a38bf878938af25d084d17"
         resources:
           requests:
             cpu: 10m
