@@ -146,8 +146,10 @@ spec:
                 cpu_request = "250m"
                 cpu_limit = "2000m"
                 # requests close to the limits so a burst of jobs cannot
-                # overcommit a worker's memory (no swap)
-                memory_request = "3Gi"
+                # overcommit a worker's memory (no swap). The build request sits
+                # 256Mi under the limit: a Testcontainers job (build + dind +
+                # helper) has to fit in the ~4.6Gi a worker has left next to the apps
+                memory_request = "2816Mi"
                 memory_limit = "4Gi"
                 service_cpu_request = "100m"
                 service_cpu_limit = "1000m"
