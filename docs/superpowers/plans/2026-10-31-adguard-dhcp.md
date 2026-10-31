@@ -74,13 +74,17 @@
 
 ### Task 3: Static node IPs live (asks the owner first)
 
-No files.
+No files. `nixos-rebuild test` writes the `lan` profile to `/run` but never activates it, so each step brings it up explicitly; a power cycle undoes both.
 
 - [ ] **Step 1: Ask the owner**, then push the branch.
-- [ ] **Step 2: homelab-2**: `ssh homelab@homelab-2 'sudo nixos-rebuild test --flake "github:thomvandevin/homelab/feat/adguard-dhcp?dir=nixos#homelab-2"'`. Expected: completes; `ssh homelab@homelab-2 'nmcli -t -f NAME,DEVICE con show --active; ip -4 addr show eno2'` shows profile `lan` on `eno2` with .153; `kubectl get node homelab-2` Ready. If ssh is lost for more than 2 minutes, stop and ask the owner to power-cycle homelab-2 (the `test` activation is gone after reboot).
+- [ ] **Step 2: homelab-2**:
+  - `ssh homelab@homelab-2 'nmcli -f NAME,UUID,FILENAME,AUTOCONNECT-PRIORITY con show'` and note any profile persisted under `/etc/NetworkManager/system-connections` (it may need `autoconnect no` after `switch`).
+  - `ssh homelab@homelab-2 'sudo nixos-rebuild test --flake "github:thomvandevin/homelab/feat/adguard-dhcp?dir=nixos#homelab-2" && sudo nmcli connection up lan'`.
+  - Expected: `nmcli -t -f NAME,DEVICE con show --active` shows `lan:eno2`, `ip -4 addr show eno2` shows .153, `kubectl get node homelab-2` Ready.
+  - If ssh is lost for more than 2 minutes, stop and ask the owner to power-cycle homelab-2.
 - [ ] **Step 3: homelab-1**, same as step 2 with .152.
 - [ ] **Step 4: homelab-0**, same with `enp1s0` and .151; also `kubectl get nodes` all Ready and `dig @192.168.178.160 example.com` answers.
-- [ ] **Step 5:** Repeat steps 2-4 with `switch` instead of `test` once Task 4's merge is done (switch from `main`). Expected: same results.
+- [ ] **Step 5:** After Task 4's merge, `switch` from `main` on each node (homelab-2, homelab-1, homelab-0), give any persisted DHCP profile `autoconnect no`, then **reboot each node** in that order. Expected after each reboot: the active connection is `lan` (by name, not just the IP, which the modem reservation would hide), node Ready.
 
 ### Task 4: Deploy AdGuard on the host network (DHCP still off)
 
@@ -94,6 +98,7 @@ No files.
 
 No files except `apps/values.yaml`.
 
+- [ ] **Step 0:** In the UniFi controller (https://192.168.178.151:8443), check that no DHCP guarding/snooping only trusts 192.168.178.1; if it does, add .151. Prefer an evening cutover: modem leases inside .30-.149 can briefly clash for up to a day.
 - [ ] **Step 1: Ask the owner** to switch the Ziggo modem's DHCPv4 server to Disabled (Advanced settings > DHCP > Status > Disabled > Apply). Existing devices keep their leases.
 - [ ] **Step 2:** Set `adguard.dhcp: true` in `apps/values.yaml`, commit `feat(adguard): serve DHCP for the LAN`, PR, merge, wait for the pod to roll.
 - [ ] **Step 3:** From the Mac: `sudo ipconfig set en0 DHCP` (or reconnect Wi-Fi), then `ipconfig getpacket en0 | grep -E "server_identifier|domain_name_server|yiaddr|router"`. Expected: server .151 (or .160), DNS `{192.168.178.160, 9.9.9.9}`, router .1, address in .30-.149.

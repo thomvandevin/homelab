@@ -52,6 +52,9 @@
   networking.networkmanager.enable = true; # Easiest to use and most distros use this by default.
   # Static, not DHCP: homelab-0 serves the LAN's DHCP (AdGuard), so it cannot lease
   # its own address, and the cluster must come up without it.
+  # Without this NM creates its own DHCP profile at boot and can activate it before
+  # `lan` is loaded; homelab-0 would then ask itself for an address.
+  networking.networkmanager.settings.main.no-auto-default = "*";
   networking.networkmanager.ensureProfiles.profiles.lan = {
     connection = {
       id = "lan";

@@ -5,9 +5,17 @@
 AdGuard Home (`apps/templates/app-adguard.yaml`) is the LAN's IPv4 DHCP server; the
 Ziggo modem's DHCPv4 server is switched off. Static leases (TV, nodes, Home Assistant
 devices) are in that template. The nodes have static IPs in `nixos/` and do not need
-DHCP. If homelab-0 or AdGuard is down for long, switch the modem's DHCPv4 server back
-on (modem UI at 192.168.178.1, Advanced settings > DHCP) and set `adguard.dhcp: false`
-before switching it off again: two DHCP servers must never run together.
+DHCP. Two DHCP servers must never run together.
+
+If homelab-0 or AdGuard is down for long:
+
+1. Switch the modem's DHCPv4 server back on (modem UI at 192.168.178.1, Advanced
+   settings > DHCP) and set `adguard.dhcp: false` in `apps/values.yaml`.
+2. When homelab-0 returns, its kubelet restarts AdGuard with DHCP still on before
+   ArgoCD syncs `false`, so run `kubectl -n adguard scale deploy adguard --replicas=0`
+   until the sync is done.
+3. To move back: switch the modem's DHCPv4 server off and set `adguard.dhcp: true`
+   at the same time.
 
 ## Adding or changing an app: update Glance
 
