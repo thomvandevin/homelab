@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    thomvandev.in/placement: workers
     glance/icon: di:cert-manager
   name: cert-manager
   namespace: argocd
@@ -18,6 +19,35 @@ spec:
     targetRevision: v1.21.3
     helm:
       valuesObject:
+        cainjector:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: thomvandev.in/role
+                        operator: In
+                        values: ["worker"]
+        webhook:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: thomvandev.in/role
+                        operator: In
+                        values: ["worker"]
+        affinity:
+          nodeAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                preference:
+                  matchExpressions:
+                    - key: thomvandev.in/role
+                      operator: In
+                      values: ["worker"]
         crds:
           enabled: true
   destination:

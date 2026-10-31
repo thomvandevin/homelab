@@ -11,6 +11,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    thomvandev.in/placement: workers
     glance/icon: di:sharry
   name: sharry
   namespace: argocd
@@ -27,6 +28,15 @@ spec:
     targetRevision: 5.4.2
     helm:
       valuesObject:
+        affinity:
+          nodeAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                preference:
+                  matchExpressions:
+                    - key: thomvandev.in/role
+                      operator: In
+                      values: ["worker"]
         resources:
           requests:
             cpu: 10m
