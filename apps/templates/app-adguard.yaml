@@ -14,9 +14,11 @@ user_rules:
   - '@@||reg.biv.sony.tv^'
   - '@@||service.biv.sony.tv^'
 filters:
+  # HaGeZi's recommended level: ads, tracking, telemetry, with few false positives.
+  # Pro++ (pro.plus.txt) is the next step up if this lets too much through.
   - enabled: true
-    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/light.txt
-    name: HaGeZi Light
+    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.txt
+    name: HaGeZi Pro
     id: 1
   - enabled: true
     url: https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/SmartTV.txt
@@ -28,6 +30,15 @@ filters:
     url: https://easydutch.pages.dev/EasyDutch.all.txt
     name: EasyDutch
     id: 3
+  - enabled: true
+    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/tif.medium.txt
+    name: HaGeZi Threat Intelligence (medium)
+    id: 4
+  # Telemetry built into iOS and macOS
+  - enabled: true
+    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.apple.txt
+    name: HaGeZi Apple native tracker
+    id: 5
 # homelab-0's LAN address only: on the host network 0.0.0.0 would also listen on the
 # node's public IPv6 address, an open resolver if the modem's IPv6 firewall were off.
 # The .160 LoadBalancer is DNATed to this address.
@@ -188,7 +199,7 @@ spec:
               cpu: 50m
               memory: 128Mi
             limits:
-              memory: 384Mi
+              memory: 512Mi
           volumeMounts:
             - name: conf
               mountPath: /opt/adguardhome/conf
