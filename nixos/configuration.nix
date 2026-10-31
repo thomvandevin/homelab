@@ -50,6 +50,22 @@
   # Pick only one of the below networking options.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
   networking.networkmanager.enable = true; # Easiest to use and most distros use this by default.
+  # Static, not DHCP: homelab-0 serves the LAN's DHCP (AdGuard), so it cannot lease
+  # its own address, and the cluster must come up without it.
+  networking.networkmanager.ensureProfiles.profiles.lan = {
+    connection = {
+      id = "lan";
+      type = "ethernet";
+      interface-name = meta.interface;
+      autoconnect-priority = 100;
+    };
+    ipv4 = {
+      method = "manual";
+      address1 = "${meta.ip}/24,192.168.178.1";
+      dns = "9.9.9.9;1.1.1.1;";
+    };
+    ipv6.method = "auto";
+  };
 
   # Set your time zone.
   time.timeZone = "Europe/Amsterdam";
