@@ -1,0 +1,22 @@
+# Homelab
+
+## Adding or changing an app: update Glance
+
+The dashboard at `http://homelab/` (`apps/templates/app-glance.yaml`, design in
+`docs/superpowers/specs/2026-10-06-glance-dashboard-design.md`) discovers apps from
+cluster objects, so an app only shows up correctly if it follows these conventions.
+Check every item when adding an app, and verify the tile on `http://homelab/` after
+ArgoCD syncs.
+
+- The app lives in its own namespace, and that Namespace carries a `glance/icon`
+  annotation (`di:`, `sh:`, `si:` or `mdi:` prefix).
+- Links are derived, not configured: a Cloudflare tunnel route in
+  `cloudflare-tunnel.yaml`, an Ingress with class `tailscale`, or a `LoadBalancer`
+  Service with a MetalLB IP. A `hostNetwork` app without a Service gets a
+  `thomvandev.in/url` annotation on its Deployment.
+- Platform components (no app tile, shown on the Platform page) are added to
+  `system_namespaces` in `apps/files/glance/facts.jq`.
+- A web UI that none of the above links (for example a plain LAN address) gets a
+  bookmark under Tools in `apps/files/glance/glance.yml`.
+- If the app needs a new kind of Kubernetes object read by the dashboard, the
+  `glance-facts` ClusterRole in `app-glance.yaml` needs the matching `get`/`list`.
