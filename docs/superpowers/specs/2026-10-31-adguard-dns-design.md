@@ -87,19 +87,24 @@ stays useful for the query log and for testing.
   templates. *Builder's call.*
 - AdGuard Home rewrites its config file on start, so the ConfigMap is copied into a
   writable volume by an init container rather than mounted read-only. *Builder's call.*
-- No persistent volume: filters re-download and stats reset on restart. That keeps
-  the pod free to move and allows more than one replica. *Builder's call*, including
-  the replica count and spreading across the workers.
-- DNS on a `LoadBalancer` Service (UDP and TCP 53) with a fixed MetalLB IP from the
-  pool 192.168.178.155-249, pinned with the `metallb.io/loadBalancerIPs` annotation.
-  The builder picks a free address. *Builder's call.*
+- One replica pinned to homelab-0 (`placement.homelab0`), where the home-critical
+  apps (Home Assistant, Matter) run. *Decided by the owner.* The FRITZ!Box fallback
+  covers the pod or node restarting.
+- No persistent volume: filters re-download and stats reset on restart. That also
+  fits homelab-0, which holds no Longhorn replicas. *Builder's call.*
+- DNS on a `LoadBalancer` Service (UDP and TCP 53) with a fixed MetalLB IP,
+  192.168.178.160, pinned with the `metallb.io/loadBalancerIPs` annotation and
+  `externalTrafficPolicy: Local`, so homelab-0 itself answers for the IP and DNS
+  does not depend on a worker being up. *Builder's call.*
 - Upstream: Quad9 and Cloudflare over DoH, with plain bootstrap resolvers.
   *Builder's call.*
 - Blocking mode that returns a definitive answer (NXDOMAIN or the null IP), never
   REFUSED or SERVFAIL, so the FRITZ!Box does not treat a block as a failure and retry
   the alternative server. *Builder's call*, verified by the test below.
 - Web UI on the tailnet through an Ingress with class `tailscale`, like ArgoCD and
-  Longhorn. The admin password is a bcrypt hash in `apps/secrets.yaml` (SOPS).
+  Longhorn, and on the LAN as the first port (80) of the DNS LoadBalancer Service,
+  because Glance builds its LAN link from that first port. The admin password is a
+  bcrypt hash in `apps/secrets.yaml` (SOPS). *Builder's call* for the LAN port.
 - An "AdGuard down" alert: a DNS probe against the LoadBalancer IP added to the
   existing kubectl + Pushover CronJob in `apps/templates/alerts.yaml`. Prometheus is
   disabled (`prometheus.enabled: false`, SSD wear), so a PrometheusRule would never
