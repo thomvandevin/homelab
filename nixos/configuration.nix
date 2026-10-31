@@ -170,6 +170,12 @@
           "imagefs.available" = "15%";
           "imagefs.inodesFree" = "5%";
         };
+        # Images share the root disk with Longhorn, which stops placing replicas
+        # below 25% free; the default 85% trigger let CI images fill homelab-1 past
+        # that, so clean up from 60% and drop images unused for a week
+        imageGCHighThresholdPercent = 60;
+        imageGCLowThresholdPercent = 50;
+        imageMaximumGCAge = "168h";
       };
     }
     (lib.mkIf (meta.role == "server") {
