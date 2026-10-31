@@ -1,0 +1,142 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    glance/icon: mdi:qrcode
+  name: spotify-qr
+  labels:
+    name: spotify-qr
+---
+# -- RBAC for GitLab runner deploy step ----------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: spotify-qr-deployer
+  namespace: spotify-qr
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner-spotify-qr-deploy
+  namespace: spotify-qr
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-ci-job
+    namespace: gitlab-runner
+roleRef:
+  kind: Role
+  name: spotify-qr-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: gitlab-registry-secret
+  namespace: spotify-qr
+data:
+  .dockerconfigjson: {{ .Values.gitlab.registry | quote }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: spotify-qr-secret
+  namespace: spotify-qr
+data:
+  admin-password: {{ .Values.spotify_qr.admin_password | b64enc | quote }}
+  session-secret: {{ .Values.spotify_qr.session_secret | b64enc | quote }}
+---
+# Families and their sp_dc cookies live in families.json on this volume.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spotify-qr-data
+  namespace: spotify-qr
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spotify-qr
+  namespace: spotify-qr
+spec:
+  replicas: 1
+  # Recreate: the ReadWriteOnce volume cannot attach to a surge pod on another node,
+  # and the app keeps rate limits in memory, so it must stay a single replica.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: spotify-qr
+  template:
+    metadata:
+      labels:
+        app: spotify-qr
+    spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: spotify-qr
+          image: registry.gitlab.com/thomvandevin-projects/spotify-qr:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATA_DIR
+              value: /app/data
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: spotify-qr-secret
+                  key: admin-password
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: spotify-qr-secret
+                  key: session-secret
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: spotify-qr-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spotify-qr-svc
+  namespace: spotify-qr
+spec:
+  type: ClusterIP
+  selector:
+    app: spotify-qr
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000

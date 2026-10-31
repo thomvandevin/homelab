@@ -96,6 +96,9 @@ spec:
             # Slowpoke Bingo
             - hostname: slowpoke.thomvandev.in
               service: http://slowpoke-bingo-svc.slowpoke-bingo.svc.cluster.local:80
+            # Spotify Family QR
+            - hostname: spotify.thomvandev.in
+              service: http://spotify-qr-svc.spotify-qr.svc.cluster.local:80
             # Swiss Rounds
             - hostname: swissrounds.thomvandev.in
               service: http://swiss-rounds-svc.swiss-rounds.svc.cluster.local
