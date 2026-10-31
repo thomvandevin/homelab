@@ -1,5 +1,14 @@
 # Homelab
 
+## The LAN's DHCP runs on homelab-0
+
+AdGuard Home (`apps/templates/app-adguard.yaml`) is the LAN's IPv4 DHCP server; the
+Ziggo modem's DHCPv4 server is switched off. Static leases (TV, nodes, Home Assistant
+devices) are in that template. The nodes have static IPs in `nixos/` and do not need
+DHCP. If homelab-0 or AdGuard is down for long, switch the modem's DHCPv4 server back
+on (modem UI at 192.168.178.1, Advanced settings > DHCP) and set `adguard.dhcp: false`
+before switching it off again: two DHCP servers must never run together.
+
 ## Adding or changing an app: update Glance
 
 The dashboard at `http://homelab/` (`apps/templates/app-glance.yaml`, design in

@@ -1,9 +1,10 @@
 {{/*
-Network-wide DNS blocking. The FRITZ!Box forwards its own lookups here (preferred
-DNS server) and falls back to a public resolver when this does not answer, so an
-outage leaves the house online but unfiltered. Everything AdGuard knows comes from
-this file: the init container copies it over the config on every start, so edits in
-the web UI are lost on restart by design.
+Network-wide DNS blocking and the LAN's IPv4 DHCP. The Ziggo modem cannot point
+devices at a LAN DNS server, so AdGuard hands out addresses itself, with itself and
+9.9.9.9 as DNS: an outage leaves the house online but unfiltered. Everything AdGuard
+knows comes from this file: the init container copies it over the config on every
+start, so edits in the web UI are lost on restart by design. If homelab-0 is down for
+long, switch the modem's DHCPv4 server back on (see CLAUDE.md).
 */}}
 {{- define "adguard.config" -}}
 # False blocks get fixed here: add an @@||domain^ rule to user_rules.
@@ -36,8 +37,8 @@ dns:
   bind_hosts:
     - 0.0.0.0
   port: 53
-  # Every LAN query arrives from the FRITZ!Box; the default 20/s per client would
-  # silently drop most of them and push the router onto its unfiltered fallback
+  # The default 20/s counts per /24, and the whole LAN is one /24: it would
+  # silently drop queries and push devices onto their unfiltered second server
   ratelimit: 0
   upstream_dns:
     - https://dns.quad9.net/dns-query
@@ -48,10 +49,44 @@ dns:
 filtering:
   protection_enabled: true
   filtering_enabled: true
-  # A definitive answer: REFUSED or SERVFAIL would make the FRITZ!Box retry its
-  # alternative server and the block would leak
+  # A definitive answer: REFUSED or SERVFAIL would make devices retry their second
+  # DNS server (9.9.9.9) and the block would leak
   blocking_mode: nxdomain
+dhcp:
+  enabled: {{ .Values.adguard.dhcp }}
+  interface_name: enp1s0
+  dhcpv4:
+    gateway_ip: 192.168.178.1
+    subnet_mask: 255.255.255.0
+    # Clear of the static leases below and of the MetalLB pool (.155-.249)
+    range_start: 192.168.178.30
+    range_end: 192.168.178.149
+    lease_duration: 86400
+    # AdGuard first, then a public server so names keep working without homelab-0
+    options:
+      - 6 ips {{ .Values.adguard.ip }},9.9.9.9
 schema_version: 34
+{{- end }}
+{{- define "adguard.staticLeases" -}}
+{{- $leases := list
+  (list "24:5a:4c:23:ad:d8" "192.168.178.5" "wifi-thomalies")
+  (list "d4:5d:64:1d:09:86" "192.168.178.10" "unknown-10")
+  (list "08:00:27:fa:ba:92" "192.168.178.11" "virtualbox-11")
+  (list "9e:13:9e:32:ea:90" "192.168.178.12" "slzb-mr5u")
+  (list "9c:13:9e:32:ea:90" "192.168.178.13" "slzb-mr5u-2")
+  (list "c4:41:1e:b2:45:1c" "192.168.178.14" "sony-tv")
+  (list "22:4a:cb:8b:5b:35" "192.168.178.20" "homelab-media")
+  (list "3c:39:e7:2c:7b:12" "192.168.178.21" "homewizard-p1")
+  (list "34:9f:7b:a0:45:8f" "192.168.178.22" "printer")
+  (list "d8:9e:f3:8c:29:ba" "192.168.178.151" "homelab-0")
+  (list "a4:bb:6d:7c:eb:5d" "192.168.178.152" "homelab-1")
+  (list "a4:bb:6d:78:03:2e" "192.168.178.153" "homelab-2")
+-}}
+{{- $out := list -}}
+{{- range $leases -}}
+{{- $out = append $out (dict "mac" (index . 0) "ip" (index . 1) "hostname" (index . 2) "expires" "" "static" true) -}}
+{{- end -}}
+{{- dict "version" 1 "leases" $out | toJson -}}
 {{- end }}
 apiVersion: v1
 kind: Namespace
@@ -71,6 +106,7 @@ metadata:
 stringData:
   AdGuardHome.yaml: |
 {{ include "adguard.config" . | indent 4 }}
+  static-leases.json: {{ include "adguard.staticLeases" . | quote }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -79,6 +115,9 @@ metadata:
   namespace: adguard
 spec:
   replicas: 1
+  # Host ports: the old pod must release 53/67 before the new one binds them
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: adguard
@@ -87,19 +126,39 @@ spec:
       labels:
         app: adguard
       annotations:
-        checksum/config: {{ include "adguard.config" . | sha256sum }}
+        checksum/config: {{ print (include "adguard.config" .) (include "adguard.staticLeases" .) | sha256sum }}
     spec:
       {{- include "placement.homelab0" . | nindent 6 }}
+      # DHCP needs the LAN broadcast domain, which the pod network does not carry
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-        # AdGuard rewrites its config file, so it gets a writable copy instead of the Secret
+        # AdGuard rewrites its config file, so it gets a writable copy instead of the
+        # Secret. Static leases come from git and win over the persisted file; dynamic
+        # leases that clash with a static MAC or IP are dropped.
         - name: config
-          image: busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
-          command: ["cp", "/config/AdGuardHome.yaml", "/opt/adguardhome/conf/AdGuardHome.yaml"]
+          image: alpine/k8s:1.37.1@sha256:712dc5385d1c1a3f83b747fa9e40f64d433a97f72ff42f9755ff7dd1f62846e4
+          command:
+            - sh
+            - -ec
+            - |
+              cp /config/AdGuardHome.yaml /opt/adguardhome/conf/AdGuardHome.yaml
+              f=/opt/adguardhome/work/data/leases.json
+              mkdir -p /opt/adguardhome/work/data
+              [ -s "$f" ] || echo '{"leases":[]}' > "$f"
+              jq --slurpfile s /config/static-leases.json '
+                ($s[0].leases) as $st
+                | {version: 1, leases: ($st + [.leases[]? | select(.static | not)
+                    | select(.mac as $m | .ip as $i | ($st | map(.mac == $m or .ip == $i) | any) | not)])}
+              ' "$f" > "$f.tmp"
+              mv "$f.tmp" "$f"
           volumeMounts:
             - name: config
               mountPath: /config
             - name: conf
               mountPath: /opt/adguardhome/conf
+            - name: work
+              mountPath: /opt/adguardhome/work
       containers:
         - name: adguard
           image: adguard/adguardhome:v0.107.79@sha256:aba9e3bf0613be3ba3755e1fc311b126e2c24bec25e18b6483894a88283074f0
@@ -113,6 +172,9 @@ spec:
               protocol: TCP
             - containerPort: 3000
               name: http
+            - containerPort: 67
+              name: dhcp
+              protocol: UDP
           readinessProbe:
             tcpSocket:
               port: 53
@@ -133,8 +195,11 @@ spec:
             secretName: adguard-config
         - name: conf
           emptyDir: {}
+        # Leases must survive a restart; homelab-0 holds no Longhorn replicas
         - name: work
-          emptyDir: {}
+          hostPath:
+            path: /var/lib/adguard
+            type: DirectoryOrCreate
 ---
 # Local traffic policy: homelab-0, where the pod runs, answers for the IP itself,
 # so DNS does not depend on a worker. http comes first because Glance builds the

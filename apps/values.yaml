@@ -89,5 +89,7 @@ homelabMcp:
   write: true
 
 adguard:
-  # The FRITZ!Box's preferred DNSv4 server points at this MetalLB address
+  # MetalLB address AdGuard's DHCP hands out as the first DNS server
   ip: 192.168.178.160
+  # Off until the Ziggo modem's DHCPv4 server is switched off: two DHCP servers must never run together
+  dhcp: false
