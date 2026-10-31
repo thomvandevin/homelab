@@ -18,26 +18,26 @@
               <div class="list list-gap-10">
               {{ range sortByTime "lastActivityAt" "rfc3339" "desc" (.JSON.Array "data.own.projects.nodes") }}
                 {{ $status := .String "pipelines.nodes.0.status" }}
-                <div class="flex items-center" style="gap:10px">
+                <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                   <span class="{{ if eq $status "SUCCESS" }}color-positive{{ else if or (eq $status "RUNNING") (eq $status "PENDING") }}color-primary{{ else if eq $status "" }}color-subdue{{ else }}color-negative{{ end }}">●</span>
-                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                  <div style="flex:1 1 140px;min-width:0" class="text-truncate">
                     <a class="size-h5 color-highlight" href="{{ .String "webUrl" }}" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
                     <span class="size-h6 color-subdue">{{ .String "pipelines.nodes.0.ref" }}</span>
                   </div>
-                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                  <div class="size-h6 text-right" style="flex:1 1 auto;min-width:0;overflow-wrap:anywhere">
                     {{ if eq $status "" }}no pipelines{{ else }}<a class="color-paragraph" href="https://gitlab.com{{ .String "pipelines.nodes.0.path" }}" target="_blank" rel="noreferrer">{{ $status }}</a> · <span {{ .String "pipelines.nodes.0.finishedAt" | parseTime "rfc3339" | toRelativeTime }}></span>{{ end }}
                   </div>
                 </div>
               {{ end }}
               {{ range sortByTime "lastActivityAt" "rfc3339" "desc" (.JSON.Array "data.swiss.projects.nodes") }}
                 {{ $status := .String "pipelines.nodes.0.status" }}
-                <div class="flex items-center" style="gap:10px">
+                <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                   <span class="{{ if eq $status "SUCCESS" }}color-positive{{ else if or (eq $status "RUNNING") (eq $status "PENDING") }}color-primary{{ else if eq $status "" }}color-subdue{{ else }}color-negative{{ end }}">●</span>
-                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                  <div style="flex:1 1 140px;min-width:0" class="text-truncate">
                     <a class="size-h5 color-highlight" href="{{ .String "webUrl" }}" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
                     <span class="size-h6 color-subdue">{{ .String "pipelines.nodes.0.ref" }}</span>
                   </div>
-                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                  <div class="size-h6 text-right" style="flex:1 1 auto;min-width:0;overflow-wrap:anywhere">
                     {{ if eq $status "" }}no pipelines{{ else }}<a class="color-paragraph" href="https://gitlab.com{{ .String "pipelines.nodes.0.path" }}" target="_blank" rel="noreferrer">{{ $status }}</a> · <span {{ .String "pipelines.nodes.0.finishedAt" | parseTime "rfc3339" | toRelativeTime }}></span>{{ end }}
                   </div>
                 </div>

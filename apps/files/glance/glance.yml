@@ -87,17 +87,17 @@ pages:
               <div class="list list-gap-10">
               {{ range .JSON.Array "apps" }}
                 {{ if .Bool "own" }}
-                <div class="flex items-center" style="gap:10px">
+                <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                   <span class="{{ if .Bool "healthy" }}color-positive{{ else }}color-negative{{ end }}">●</span>
                   {{ if .String "icon" }}<img class="docker-container-icon{{ if .Bool "iconInvert" }} flat-icon{{ end }}" src="{{ .String "icon" }}" alt="" loading="lazy" style="flex:0 0 auto">{{ else }}<span class="size-h6 color-highlight" style="flex:0 0 auto;width:20px;height:20px;line-height:20px;text-align:center;border-radius:4px;background:var(--color-separator)">{{ printf "%.1s" (.String "name") }}</span>{{ end }}
-                  <div style="flex:1 1 auto;min-width:0">
-                    <div class="flex items-center" style="gap:10px">
+                  <div style="flex:1 1 140px;min-width:0">
+                    <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                       <span class="size-h4 color-highlight text-truncate">{{ .String "name" }}</span>
                       <span class="size-h6 color-subdue">{{ .Int "ready" }}/{{ .Int "desired" }}{{ if .Bool "recentRestart" }} · <span class="color-negative">{{ .Int "restarts" }} restarts</span>{{ end }}{{ if .Exists "argocd.sync" }}{{ if ne (.String "argocd.sync") "Synced" }} · <span class="color-negative">{{ .String "argocd.sync" }}</span>{{ end }}{{ if ne (.String "argocd.health") "Healthy" }} · <span class="color-negative">{{ .String "argocd.health" }}</span>{{ end }}{{ end }}</span>
                     </div>
                   </div>
-                  <div class="size-h6 text-right" style="flex:0 0 auto">
-                    {{ range .Array "links" }}<a class="color-primary" href="{{ .String "url" }}" target="_blank" rel="noreferrer" title="{{ .String "kind" }}">{{ .String "label" }}</a>&nbsp;&nbsp;{{ end }}
+                  <div class="size-h6" style="flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;justify-content:flex-end;column-gap:12px">
+                    {{ range .Array "links" }}<a class="color-primary" style="overflow-wrap:anywhere" href="{{ .String "url" }}" target="_blank" rel="noreferrer" title="{{ .String "kind" }}">{{ .String "label" }}</a>{{ end }}
                   </div>
                 </div>
                 {{ end }}
@@ -110,15 +110,15 @@ pages:
               <div class="list list-gap-10">
               {{ range .JSON.Array "apps" }}
                 {{ if not (.Bool "own") }}
-                <div class="flex items-center" style="gap:10px">
+                <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                   <span class="{{ if .Bool "healthy" }}color-positive{{ else }}color-negative{{ end }}">●</span>
                   {{ if .String "icon" }}<img class="docker-container-icon{{ if .Bool "iconInvert" }} flat-icon{{ end }}" src="{{ .String "icon" }}" alt="" loading="lazy" style="flex:0 0 auto">{{ else }}<span class="size-h6 color-highlight" style="flex:0 0 auto;width:20px;height:20px;line-height:20px;text-align:center;border-radius:4px;background:var(--color-separator)">{{ printf "%.1s" (.String "name") }}</span>{{ end }}
-                  <div style="flex:1 1 auto;min-width:0">
+                  <div style="flex:1 1 140px;min-width:0">
                     <span class="size-h4 color-highlight">{{ .String "name" }}</span>
                     <span class="size-h6 color-subdue">{{ .Int "ready" }}/{{ .Int "desired" }}{{ if .Bool "recentRestart" }} · <span class="color-negative">{{ .Int "restarts" }} restarts</span>{{ end }}{{ if .Exists "argocd.health" }}{{ if ne (.String "argocd.health") "Healthy" }} · <span class="color-negative">{{ .String "argocd.health" }}</span>{{ end }}{{ end }}</span>
                   </div>
-                  <div class="size-h6 text-right" style="flex:0 0 auto">
-                    {{ range .Array "links" }}<a class="color-primary" href="{{ .String "url" }}" target="_blank" rel="noreferrer" title="{{ .String "kind" }}">{{ .String "label" }}</a>&nbsp;&nbsp;{{ end }}
+                  <div class="size-h6" style="flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;justify-content:flex-end;column-gap:12px">
+                    {{ range .Array "links" }}<a class="color-primary" style="overflow-wrap:anywhere" href="{{ .String "url" }}" target="_blank" rel="noreferrer" title="{{ .String "kind" }}">{{ .String "label" }}</a>{{ end }}
                   </div>
                 </div>
                 {{ end }}
@@ -204,9 +204,9 @@ pages:
                 {{ range .Array "sessions" }}{{ if and (.Bool "busy") (eq (.String "state") "approval") }}{{ $approval = true }}{{ end }}{{ if .Bool "busy" }}{{ $busy = true }}{{ end }}{{ end }}
                 {{ if gt (len (.Array "tools")) 0 }}{{ $busy = true }}{{ end }}
                 <div>
-                  <div class="flex items-center" style="gap:10px">
+                  <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                     <span class="{{ if $approval }}color-negative{{ else if $busy }}color-primary{{ else if .Bool "connected" }}color-highlight{{ else }}color-subdue{{ end }}">●</span>
-                    <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                    <div style="flex:1 1 140px;min-width:0" class="text-truncate">
                       <a class="size-h5 color-highlight" href="{{ .String "web" }}" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
                       <span class="size-h6 color-subdue">{{ if not (.Bool "window") }}no window{{ else if not (.Bool "connected") }}server not connected{{ else if .String "capacity" }}{{ .String "capacity" }} sessions{{ end }}</span>
                     </div>
@@ -236,14 +236,14 @@ pages:
               <div class="list list-gap-10">
               {{ range .JSON.Array "schedules" }}
                 {{ $failed := ne (.Int "last.exit") 0 }}
-                <div class="flex items-center" style="gap:10px">
+                <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                   <span class="{{ if .Bool "running" }}color-primary{{ else if $failed }}color-negative{{ else if .String "last.ended_at" }}color-highlight{{ else }}color-subdue{{ end }}">●</span>
-                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                  <div style="flex:1 1 140px;min-width:0" class="text-truncate">
                     <span class="size-h5 color-highlight">{{ .String "name" }}</span>
                     <span class="size-h6 color-subdue">{{ .String "repo" }} · {{ .String "cron" }}</span>
                     {{ if .String "last.result" }}<div class="size-h6 text-truncate {{ if $failed }}color-negative{{ else }}color-subdue{{ end }}">{{ .String "last.result" }}</div>{{ end }}
                   </div>
-                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                  <div class="size-h6 text-right" style="flex:1 1 auto;min-width:0;overflow-wrap:anywhere">
                     {{ if .Bool "running" }}<span class="color-primary">running since <span {{ .String "last.started_at" | parseTime "rfc3339" | toRelativeTime }}></span></span>{{ else if .String "last.ended_at" }}last <span {{ .String "last.ended_at" | parseTime "rfc3339" | toRelativeTime }}></span> ago{{ if $failed }} · exit {{ .Int "last.exit" }}{{ end }}{{ else }}<span class="color-subdue">never ran</span>{{ end }}
                     {{ if .String "next_run_at" }}<div class="color-subdue">next <span {{ .String "next_run_at" | parseTime "rfc3339" | toRelativeTime }}></span></div>{{ end }}
                   </div>
@@ -312,13 +312,13 @@ pages:
             template: |
               <div class="list list-gap-10">
               {{ range .JSON.Array "workloads" }}
-                <div class="flex items-center" style="gap:10px">
+                <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                   <span class="{{ if ge (.Int "ready") (.Int "desired") }}color-positive{{ else }}color-negative{{ end }}">●</span>
-                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                  <div style="flex:1 1 140px;min-width:0" class="text-truncate">
                     <span class="size-h5 color-highlight">{{ .String "namespace" }}/{{ .String "name" }}</span>
                     <span class="size-h6 color-subdue">{{ .String "kind" }} · {{ .String "tag" }}</span>
                   </div>
-                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                  <div class="size-h6 text-right" style="flex:1 1 auto;min-width:0;overflow-wrap:anywhere">
                     {{ .Int "ready" }}/{{ .Int "desired" }}
                     {{ if gt (.Int "restarts") 0 }}· <span class="{{ if .Bool "recentRestart" }}color-negative{{ end }}">{{ .Int "restarts" }} restarts, last {{ .String "lastRestart" }} ago</span>{{ end }}
                     · on {{ .String "nodes" }} · {{ .String "age" }}
@@ -371,12 +371,12 @@ pages:
             template: |
               <div class="list list-gap-10">
               {{ range .JSON.Array "storage.volumes" }}
-                <div class="flex items-center" style="gap:10px">
+                <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                   <span class="{{ if eq (.String "robustness") "healthy" }}color-positive{{ else if eq (.String "state") "detached" }}color-subdue{{ else }}color-negative{{ end }}">●</span>
-                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                  <div style="flex:1 1 140px;min-width:0" class="text-truncate">
                     <span class="size-h5 color-highlight">{{ .String "namespace" }}/{{ .String "pvc" }}</span>
                   </div>
-                  <div class="size-h6 text-right" style="flex:0 0 auto">
+                  <div class="size-h6 text-right" style="flex:1 1 auto;min-width:0;overflow-wrap:anywhere">
                     {{ .Float "sizeGi" }} GiB · {{ .String "state" }} · {{ .String "robustness" }} · replicas on {{ .String "replicaNodes" }} · engine {{ .String "engine" }}
                   </div>
                 </div>
@@ -410,13 +410,13 @@ pages:
             template: |
               <div class="list list-gap-10">
               {{ range .JSON.Array "argocd" }}
-                <div class="flex items-center" style="gap:10px">
+                <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                   <span class="{{ if and (eq (.String "sync") "Synced") (eq (.String "health") "Healthy") }}color-positive{{ else }}color-negative{{ end }}">●</span>
-                  <div style="flex:1 1 auto;min-width:0" class="text-truncate">
+                  <div style="flex:1 1 140px;min-width:0" class="text-truncate">
                     <a class="size-h5 color-highlight" href="https://argocd.snowy-gorgon.ts.net/applications/argocd/{{ .String "name" }}" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
                     <span class="size-h6 color-subdue">{{ .String "source" }}</span>
                   </div>
-                  <div class="size-h6 text-right" style="flex:0 0 auto">{{ .String "sync" }} · {{ .String "health" }} · {{ .String "revision" }}</div>
+                  <div class="size-h6 text-right" style="flex:1 1 auto;min-width:0;overflow-wrap:anywhere">{{ .String "sync" }} · {{ .String "health" }} · {{ .String "revision" }}</div>
                 </div>
               {{ end }}
               </div>
@@ -426,11 +426,11 @@ pages:
             template: |
               <div class="list list-gap-10">
               {{ range .JSON.Array "platform" }}
-                <div class="flex items-center" style="gap:10px">
+                <div class="flex items-center" style="gap:2px 10px;flex-wrap:wrap">
                   <span class="{{ if .Bool "healthy" }}color-positive{{ else }}color-negative{{ end }}">●</span>
                   {{ if .String "icon" }}<img class="docker-container-icon{{ if .Bool "iconInvert" }} flat-icon{{ end }}" src="{{ .String "icon" }}" alt="" loading="lazy" style="flex:0 0 auto">{{ else }}<span class="size-h6 color-highlight" style="flex:0 0 auto;width:20px;height:20px;line-height:20px;text-align:center;border-radius:4px;background:var(--color-separator)">{{ printf "%.1s" (.String "name") }}</span>{{ end }}
-                  <div style="flex:1 1 auto;min-width:0"><span class="size-h5 color-highlight">{{ .String "name" }}</span> <span class="size-h6 color-subdue">{{ .Int "ready" }}/{{ .Int "desired" }}{{ if .Bool "recentRestart" }} · <span class="color-negative">{{ .Int "restarts" }} restarts</span>{{ end }}</span></div>
-                  <div class="size-h6 text-right" style="flex:0 0 auto">{{ range .Array "links" }}<a class="color-primary" href="{{ .String "url" }}" target="_blank" rel="noreferrer">{{ .String "label" }}</a>&nbsp;&nbsp;{{ end }}</div>
+                  <div style="flex:1 1 140px;min-width:0"><span class="size-h5 color-highlight">{{ .String "name" }}</span> <span class="size-h6 color-subdue">{{ .Int "ready" }}/{{ .Int "desired" }}{{ if .Bool "recentRestart" }} · <span class="color-negative">{{ .Int "restarts" }} restarts</span>{{ end }}</span></div>
+                  <div class="size-h6" style="flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;justify-content:flex-end;column-gap:12px">{{ range .Array "links" }}<a class="color-primary" style="overflow-wrap:anywhere" href="{{ .String "url" }}" target="_blank" rel="noreferrer">{{ .String "label" }}</a>{{ end }}</div>
                 </div>
               {{ end }}
               </div>
