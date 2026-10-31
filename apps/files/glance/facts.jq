@@ -103,7 +103,11 @@ def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cer
 | ($namespaces | map(
     . as $ns
     | ($workloadRows | map(select(.namespace == $ns))) as $wl
-    | ($podItems | map(select(.metadata.namespace == $ns and .metadata.ownerReferences[0].kind != "Job"))) as $np
+    # A node shutdown leaves its ReplicaSet pods behind as Failed records next to their
+    # replacements, and Kubernetes only collects them past 12500 terminated pods
+    | ($podItems | map(select(.metadata.namespace == $ns and .metadata.ownerReferences[0].kind != "Job"
+        and ((.status.phase == "Failed" and (.status.reason == "Terminated" or .status.reason == "NodeShutdown")
+              and .metadata.ownerReferences[0].kind == "ReplicaSet") | not)))) as $np
     | ($nsIcons[$ns] // ($wl | map(.icon) | map(select(. != null)) | .[0]) // $argoIcons[$ns] // fallback_icons[$ns]) as $icon
     | {
       name: $ns,
