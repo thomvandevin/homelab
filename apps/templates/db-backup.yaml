@@ -24,6 +24,7 @@ spec:
       activeDeadlineSeconds: 3600
       template:
         spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
           restartPolicy: Never
           initContainers:
             - name: dump

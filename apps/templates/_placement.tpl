@@ -1,7 +1,9 @@
 {{/*
 Pod-spec fragments for node placement. homelab-0 is the control plane and the
-only host with the Zigbee/Bluetooth hardware, the UniFi inform address and the
-registry hostPath; workers carry thomvandev.in/role=worker.
+only host with the Zigbee/Bluetooth hardware and the UniFi inform address; it runs
+the home apps (placement.homelab0) and nothing else for longer than a worker outage.
+Everything else prefers the workers (thomvandev.in/role=worker), and the descheduler
+moves pods that fell back to homelab-0 back once a worker has room.
 */}}
 
 {{- define "placement.homelab0" -}}
