@@ -91,5 +91,5 @@ homelabMcp:
 adguard:
   # MetalLB address AdGuard's DHCP hands out as the first DNS server
   ip: 192.168.178.160
-  # Off until the Ziggo modem's DHCPv4 server is switched off: two DHCP servers must never run together
-  dhcp: false
+  # On: the Ziggo modem's DHCPv4 server is switched off (2026-10-31); two DHCP servers must never run together
+  dhcp: true
