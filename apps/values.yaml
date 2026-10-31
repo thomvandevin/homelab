@@ -87,3 +87,7 @@ homelabMcp:
   accessAud: e6f740de94f47818ceea12be07155cbdf0c15d4865f794c85a183a2469b9af99
   # restart_deployment and argocd_sync, plus the RBAC they need
   write: true
+
+adguard:
+  # The FRITZ!Box's preferred DNSv4 server points at this MetalLB address
+  ip: 192.168.178.160

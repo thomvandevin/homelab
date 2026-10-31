@@ -1,0 +1,199 @@
+{{/*
+Network-wide DNS blocking. The FRITZ!Box forwards its own lookups here (preferred
+DNS server) and falls back to a public resolver when this does not answer, so an
+outage leaves the house online but unfiltered. Everything AdGuard knows comes from
+this file: the init container copies it over the config on every start, so edits in
+the web UI are lost on restart by design.
+*/}}
+{{- define "adguard.config" -}}
+# False blocks get fixed here: add an @@||domain^ rule to user_rules.
+user_rules:
+  # Sony firmware update and registration
+  - '@@||update.biv.sony.tv^'
+  - '@@||reg.biv.sony.tv^'
+  - '@@||service.biv.sony.tv^'
+filters:
+  - enabled: true
+    url: https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/light.txt
+    name: HaGeZi Light
+    id: 1
+  - enabled: true
+    url: https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/SmartTV.txt
+    name: Perflyst SmartTV
+    id: 2
+  # AdGuard's catalogue has no Dutch list; EasyDutch is mostly cosmetic browser
+  # rules, only its plain domain rules apply at DNS level
+  - enabled: true
+    url: https://easydutch.pages.dev/EasyDutch.all.txt
+    name: EasyDutch
+    id: 3
+http:
+  address: 0.0.0.0:3000
+users:
+  - name: admin
+    password: {{ .Values.adguard.password_hash | quote }}
+dns:
+  bind_hosts:
+    - 0.0.0.0
+  port: 53
+  upstream_dns:
+    - https://dns.quad9.net/dns-query
+    - https://cloudflare-dns.com/dns-query
+  bootstrap_dns:
+    - 9.9.9.9
+    - 1.1.1.1
+filtering:
+  protection_enabled: true
+  filtering_enabled: true
+  # A definitive answer: REFUSED or SERVFAIL would make the FRITZ!Box retry its
+  # alternative server and the block would leak
+  blocking_mode: nxdomain
+schema_version: 34
+{{- end }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    glance/icon: di:adguard-home
+  name: adguard
+  labels:
+    name: adguard
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: adguard-config
+  namespace: adguard
+stringData:
+  AdGuardHome.yaml: |
+{{ include "adguard.config" . | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adguard
+  namespace: adguard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adguard
+  template:
+    metadata:
+      labels:
+        app: adguard
+      annotations:
+        checksum/config: {{ include "adguard.config" . | sha256sum }}
+    spec:
+      {{- include "placement.homelab0" . | nindent 6 }}
+      initContainers:
+        # AdGuard rewrites its config file, so it gets a writable copy instead of the Secret
+        - name: config
+          image: busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
+          command: ["cp", "/config/AdGuardHome.yaml", "/opt/adguardhome/conf/AdGuardHome.yaml"]
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: conf
+              mountPath: /opt/adguardhome/conf
+      containers:
+        - name: adguard
+          image: adguard/adguardhome:v0.107.79@sha256:aba9e3bf0613be3ba3755e1fc311b126e2c24bec25e18b6483894a88283074f0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 53
+              name: dns-udp
+              protocol: UDP
+            - containerPort: 53
+              name: dns-tcp
+              protocol: TCP
+            - containerPort: 3000
+              name: http
+          readinessProbe:
+            tcpSocket:
+              port: 53
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+          volumeMounts:
+            - name: conf
+              mountPath: /opt/adguardhome/conf
+            - name: work
+              mountPath: /opt/adguardhome/work
+      volumes:
+        - name: config
+          secret:
+            secretName: adguard-config
+        - name: conf
+          emptyDir: {}
+        - name: work
+          emptyDir: {}
+---
+# Local traffic policy: homelab-0, where the pod runs, answers for the IP itself,
+# so DNS does not depend on a worker. http comes first because Glance builds the
+# tile's LAN link from the first port.
+apiVersion: v1
+kind: Service
+metadata:
+  name: adguard
+  namespace: adguard
+  annotations:
+    metallb.io/loadBalancerIPs: {{ .Values.adguard.ip }}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app: adguard
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+    - name: dns-udp
+      port: 53
+      targetPort: dns-udp
+      protocol: UDP
+    - name: dns-tcp
+      port: 53
+      targetPort: dns-tcp
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adguard-ui
+  namespace: adguard
+spec:
+  type: ClusterIP
+  selector:
+    app: adguard
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# -- Tailscale Ingress (internal only) ----------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: adguard
+  namespace: adguard
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: adguard-ui
+                port:
+                  number: 80
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - adguard
