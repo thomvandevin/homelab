@@ -104,8 +104,11 @@ def system_namespaces: ["kube-system", "longhorn-system", "metallb-system", "cer
     . as $ns
     | ($workloadRows | map(select(.namespace == $ns))) as $wl
     # A node shutdown leaves its ReplicaSet pods behind as Failed records next to their
-    # replacements, and Kubernetes only collects them past 12500 terminated pods
+    # replacements, and Kubernetes only collects them past 12500 terminated pods.
+    # Pods without an owner are CI job pods (gitlab-runner creates them directly) or
+    # one-off debug pods; they pass through Pending and say nothing about the app.
     | ($podItems | map(select(.metadata.namespace == $ns and .metadata.ownerReferences[0].kind != "Job"
+        and ((.metadata.ownerReferences // []) | length > 0)
         and ((.status.phase == "Failed" and (.status.reason == "Terminated" or .status.reason == "NodeShutdown")
               and .metadata.ownerReferences[0].kind == "ReplicaSet") | not)))) as $np
     | ($nsIcons[$ns] // ($wl | map(.icon) | map(select(. != null)) | .[0]) // $argoIcons[$ns] // fallback_icons[$ns]) as $icon
