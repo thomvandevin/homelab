@@ -112,6 +112,15 @@ DHCPv6 is stateless and hands out Ziggo's IPv6 DNS, so dual-stack devices can re
 past AdGuard. That gap is accepted and measured after cutover (AdGuard query volume
 per device); no dual-stack work in this project.
 
+Measured at cutover (2026-10-31): in a full TV session (Netflix, Videoland, Plex,
+SmartTube, casting) only 23 TV lookups reached AdGuard, all Netflix and Google;
+Videoland, Plex and SmartTube never showed up. Most of the TV's DNS goes to Ziggo's
+IPv6 resolver. Closing the gap needs either IPv6 off on the LAN (modem setting, if it
+exists) or an IPv6 address for AdGuard; both are open decisions for the owner.
+
+The `9.9.9.9` fallback was not exercised at cutover: stopping AdGuard would cut DNS
+for the household, and the only test device had manually configured DNS.
+
 ## Blocklists (decided)
 
 - hagezi Light
