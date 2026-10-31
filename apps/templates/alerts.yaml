@@ -1,7 +1,8 @@
 # Cluster alerts to Pushover, every 10 minutes, without the Prometheus stack: it lists failed Jobs, crash-looping
 # pods and nodes that are not Ready, and sends each one once. The last set of problems is kept in a ConfigMap so a
 # problem that stays does not repeat and one that comes back after being fixed alerts again. A node that recovers gets
-# a "resolved" message. Uses the same Pushover app as the scraper and the workspace.
+# a "resolved" message. Uses the same Pushover app as the scraper and the workspace. AdGuard gets a DNS probe too: when
+# it is down the FRITZ!Box silently falls back to an unfiltered resolver, so nothing else would notice.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -99,7 +100,12 @@ data:
     nodes=$(kubectl get nodes -o json | jq -r '
       .items[] | select(([.status.conditions[] | select(.type == "Ready" and .status == "True")] | length) == 0)
       | "node \(.metadata.name) notready"')
-    current=$(printf '%s\n%s\n%s\n' "$jobs" "$crashloops" "$nodes" | sed '/^$/d')
+    # Three tries, so one slow answer does not page anyone.
+    dns="dns adguard down"
+    for _ in 1 2 3; do
+      if nslookup -timeout=5 quad9.net {{ .Values.adguard.ip }} > /dev/null 2>&1; then dns=""; break; fi
+    done
+    current=$(printf '%s\n%s\n%s\n%s\n' "$jobs" "$crashloops" "$nodes" "$dns" | sed '/^$/d')
 
     notify() {
       curl -sS -m 20 -o /dev/null -F "token=$PUSHOVER_TOKEN" -F "user=$PUSHOVER_USER" \
@@ -119,14 +125,20 @@ data:
           notify "Crash loop: ${name#*/}" "$name keeps restarting" 0 ;;
         node)
           notify "Node not ready: $name" "$name is not Ready; name resolution and apps on it may be down" 1 ;;
+        dns)
+          notify "AdGuard down" "AdGuard is not answering; the house is on the FRITZ!Box fallback, unfiltered" 0 ;;
       esac
       echo "alerted: $kind $name"
     done
 
-    # Nodes that were not Ready last time and are now.
-    printf '%s\n' "$previous" | grep '^node ' | while read -r kind name rest; do
+    # Nodes that were not Ready last time and are now, and AdGuard answering again.
+    printf '%s\n' "$previous" | grep -E '^(node|dns) ' | while read -r kind name rest; do
       [ -z "$kind" ] && continue
-      printf '%s\n' "$current" | grep -qxF "$kind $name $rest" || notify "Node ready again: $name" "$name is Ready" 0
+      printf '%s\n' "$current" | grep -qxF "$kind $name $rest" && continue
+      case "$kind" in
+        node) notify "Node ready again: $name" "$name is Ready" 0 ;;
+        dns) notify "AdGuard back" "AdGuard is answering again; filtering is back on" 0 ;;
+      esac
     done
 
     kubectl -n alerts create configmap alerts-state --from-literal=keys="$current" --dry-run=client -o yaml | kubectl apply -f -
