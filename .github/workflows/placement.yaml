@@ -1,0 +1,16 @@
+name: placement
+run-name: placement check
+on:
+  pull_request:
+    paths:
+      - "apps/templates/**"
+      - "scripts/check-placement.sh"
+      - ".github/workflows/placement.yaml"
+
+jobs:
+  check:
+    name: Every workload states its node placement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: scripts/check-placement.sh
