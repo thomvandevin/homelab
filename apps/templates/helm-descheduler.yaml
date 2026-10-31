@@ -1,0 +1,57 @@
+# Pods that prefer the workers fall back to homelab-0 when the workers are down and
+# Kubernetes never moves them back; this evicts them again once a worker has room.
+# Only preferred node affinity is acted on: home apps (required nodeSelector),
+# DaemonSets and system-critical pods are never touched.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    thomvandev.in/placement: workers
+  name: descheduler
+  namespace: argocd
+spec:
+  project: default
+  syncPolicy:
+    automated:
+      prune: true
+  source:
+    repoURL: https://kubernetes-sigs.github.io/descheduler/
+    chart: descheduler
+    targetRevision: 0.37.0
+    helm:
+      valuesObject:
+        kind: CronJob
+        schedule: "*/30 * * * *"
+        affinity:
+          nodeAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                preference:
+                  matchExpressions:
+                    - key: thomvandev.in/role
+                      operator: In
+                      values: ["worker"]
+        deschedulerPolicy:
+          maxNoOfPodsToEvictPerNode: 3
+          profiles:
+            - name: workers
+              pluginConfig:
+                # nodeFit: only evict when a worker can take the pod; cache emptyDirs
+                # (flaresolverr, scraper, glance) may be evicted
+                - name: DefaultEvictor
+                  args:
+                    nodeFit: true
+                    podProtections:
+                      defaultDisabled:
+                        - PodsWithLocalStorage
+                - name: RemovePodsViolatingNodeAffinity
+                  args:
+                    nodeAffinityType:
+                      - preferredDuringSchedulingIgnoredDuringExecution
+              plugins:
+                deschedule:
+                  enabled:
+                    - RemovePodsViolatingNodeAffinity
+  destination:
+    namespace: kube-system
+    server: https://kubernetes.default.svc

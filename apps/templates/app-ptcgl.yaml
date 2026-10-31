@@ -47,6 +47,7 @@ spec:
       labels:
         app: rustfs
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       securityContext:
         fsGroup: 10001
       containers:
@@ -145,6 +146,7 @@ spec:
       activeDeadlineSeconds: 21600
       template:
         spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
           restartPolicy: Never
           initContainers:
             # The image pins a TCGL client version whose CDN content tree gets pruned after updates; find the newest
@@ -337,6 +339,7 @@ spec:
       labels:
         app: ptcgl-assets
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       containers:
         - name: nginx
           image: nginx:1.31-alpine@sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606

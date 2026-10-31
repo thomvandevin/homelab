@@ -12,6 +12,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    thomvandev.in/placement: workers
     glance/icon: di:tailscale
   name: tailscale
   namespace: argocd
@@ -28,6 +29,16 @@ spec:
     targetRevision: 1.104.2
     helm:
       valuesObject:
+        operatorConfig:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: thomvandev.in/role
+                        operator: In
+                        values: ["worker"]
         oauthSecretVolume:
           secret:
             secretName: tailscale-secret

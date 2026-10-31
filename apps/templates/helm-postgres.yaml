@@ -11,6 +11,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    thomvandev.in/placement: workers
     glance/icon: di:postgresql
   name: postgresql
   namespace: argocd
@@ -28,6 +29,15 @@ spec:
     helm:
       valuesObject:
         primary:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: thomvandev.in/role
+                        operator: In
+                        values: ["worker"]
           resources:
             limits:
               memory: 1Gi

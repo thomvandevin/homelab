@@ -17,6 +17,23 @@ If homelab-0 or AdGuard is down for long:
 3. To move back: switch the modem's DHCPv4 server off and set `adguard.dhcp: true`
    at the same time.
 
+## Placement: homelab-0 is for home
+
+homelab-0 runs the control plane, the home apps and per-node system components only
+(design in `docs/superpowers/specs/2026-10-31-node-placement-design.md`).
+
+- Home apps (Home Assistant, Matter, UniFi, AdGuard) use `placement.homelab0`. Adding
+  one is a deliberate decision; nothing else goes there.
+- Every other Deployment, StatefulSet and CronJob includes `placement.preferWorkers`
+  (or `placement.workersOnly` for CI job pods). Chart Applications set the same
+  affinity in their values.
+- Every ArgoCD Application carries `thomvandev.in/placement: home | workers | system`.
+- `scripts/check-placement.sh` enforces both on every PR (`.github/workflows/placement.yaml`).
+- Pods that fell back to homelab-0 during a worker outage are moved back by the
+  descheduler (`helm-descheduler.yaml`, every 30 minutes).
+- Merging anything under `nixos/` makes `.github/workflows/rebuild-nixos.yaml` switch
+  all three nodes one by one; check that every Longhorn volume is healthy first.
+
 ## Adding or changing an app: update Glance
 
 The dashboard at `http://homelab/` (`apps/templates/app-glance.yaml`, design in

@@ -47,6 +47,7 @@ spec:
       labels:
         app: nginx-reverse-proxy
     spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
       containers:
         - name: nginx
           image: nginx:1.31@sha256:5ab5b0b01097420873a3f3330f44248e34a3c2a3e8d5ee30658aeae8cb7435da

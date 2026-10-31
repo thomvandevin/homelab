@@ -159,6 +159,7 @@ spec:
       activeDeadlineSeconds: 240
       template:
         spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
           serviceAccountName: alerts
           restartPolicy: Never
           containers:

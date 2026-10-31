@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    thomvandev.in/placement: workers
     glance/icon: di:nginx
   name: ingress-nginx-internal
   namespace: argocd
@@ -19,6 +20,15 @@ spec:
     helm:
       valuesObject:
         controller:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: thomvandev.in/role
+                        operator: In
+                        values: ["worker"]
           service:
             externalTrafficPolicy: "Local"
           ingressClassResource:

@@ -59,6 +59,7 @@ spec:
       activeDeadlineSeconds: 300
       template:
         spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
           serviceAccountName: ci-orphan-cleanup
           restartPolicy: Never
           containers:

@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
+    thomvandev.in/placement: system
     glance/icon: di:longhorn
   name: longhorn
   namespace: argocd

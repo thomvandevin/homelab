@@ -256,6 +256,7 @@ spec:
       activeDeadlineSeconds: 3600
       template:
         spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
           imagePullSecrets:
             - name: gitlab-registry-secret
           restartPolicy: OnFailure
@@ -293,6 +294,7 @@ spec:
     spec:
       template:
         spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
           restartPolicy: OnFailure
           containers:
             - name: curl
@@ -331,6 +333,7 @@ spec:
     spec:
       template:
         spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
           restartPolicy: OnFailure
           containers:
             - name: curl
@@ -368,6 +371,7 @@ spec:
     spec:
       template:
         spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
           restartPolicy: OnFailure
           containers:
             - name: curl
