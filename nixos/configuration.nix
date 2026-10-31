@@ -126,9 +126,10 @@
   # resolv.conf is Tailscale's MagicDNS, which fails for minutes whenever
   # tailscaled rebinds (ISP prefix changes), taking all cluster DNS with it.
   # Tailnet names go to MagicDNS through the coredns-custom ConfigMap instead.
+  # Not the router: it forwards to AdGuard, and cluster workloads stay unfiltered.
   environment.etc."k3s/resolv.conf".text = ''
     search snowy-gorgon.ts.net
-    nameserver 192.168.178.1
+    nameserver 9.9.9.9
     nameserver 1.1.1.1
   '';
 
