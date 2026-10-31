@@ -24,16 +24,22 @@
     let
       nodes = {
         homelab-0 = {
+          ip = "192.168.178.151";
+          interface = "enp1s0";
           role = "server";
           disk = "/dev/sda";
           hardware = ./hosts/homelab-0.nix;
         };
         homelab-1 = {
+          ip = "192.168.178.152";
+          interface = "eno2";
           role = "agent";
           disk = "/dev/nvme0n1";
           hardware = ./hosts/optiplex-5080-micro.nix;
         };
         homelab-2 = {
+          ip = "192.168.178.153";
+          interface = "eno2";
           role = "agent";
           disk = "/dev/nvme0n1";
           hardware = ./hosts/optiplex-5080-micro.nix;
@@ -47,7 +53,7 @@
           specialArgs = {
             meta = {
               hostname = name;
-              inherit (node) role disk;
+              inherit (node) role disk ip interface;
             };
           };
           system = "x86_64-linux";
