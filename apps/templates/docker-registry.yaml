@@ -39,6 +39,10 @@ metadata:
   namespace: registry
 spec:
   replicas: 1
+  # RWO volume: when the pod moves node the old one must release it first, or the
+  # rolling update waits forever on the attach
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: registry
