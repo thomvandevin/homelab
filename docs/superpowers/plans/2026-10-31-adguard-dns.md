@@ -160,6 +160,7 @@ dig +short @192.168.178.160 example.com              # an address
 dig @192.168.178.160 samba.tv | grep status          # status: NXDOMAIN (Perflyst/hagezi), never REFUSED/SERVFAIL
 dig +short @192.168.178.160 update.biv.sony.tv       # an address (allowlisted)
 dig +tcp +short @192.168.178.160 example.com         # an address over TCP
+seq 60 | xargs -P 60 -I{} dig +short +tries=1 +time=2 @192.168.178.160 example.com | grep -c .   # 60: no rate limiting (all LAN traffic arrives from the FRITZ!Box)
 ```
 If `samba.tv` is not on the active lists, use any domain present in hagezi Light.
 

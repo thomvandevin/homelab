@@ -36,6 +36,9 @@ dns:
   bind_hosts:
     - 0.0.0.0
   port: 53
+  # Every LAN query arrives from the FRITZ!Box; the default 20/s per client would
+  # silently drop most of them and push the router onto its unfiltered fallback
+  ratelimit: 0
   upstream_dns:
     - https://dns.quad9.net/dns-query
     - https://cloudflare-dns.com/dns-query
