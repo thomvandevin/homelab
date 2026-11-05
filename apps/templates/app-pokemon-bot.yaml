@@ -760,6 +760,9 @@ spec:
                 secretKeyRef:
                   name: dashboard-secret
                   key: jwt-secret
+            # Stock checks for the shops the scraper reads through the fetcher go through it too (pokemon-bot !252).
+            - name: FINGERPRINT_FETCHER_URL
+              value: http://fingerprint-fetcher.pokemon-bot.svc.cluster.local:8090
           startupProbe:
             httpGet:
               path: /actuator/health/liveness
