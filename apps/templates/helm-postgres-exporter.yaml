@@ -15,7 +15,7 @@ spec:
   source:
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: prometheus-postgres-exporter
-    targetRevision: 8.2.2
+    targetRevision: 8.2.3
     helm:
       valuesObject:
         affinity:
