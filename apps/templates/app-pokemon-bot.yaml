@@ -71,7 +71,7 @@ spec:
       {{- include "placement.preferWorkers" . | nindent 6 }}
       containers:
         - name: rabbitmq
-          image: rabbitmq:4.4-management-alpine@sha256:6cb708876a6163c93f1e5af03a649db13765027ff7a7d775c01a63b6a80545ee
+          image: rabbitmq:4.4-management-alpine@sha256:4841f6384ef8313c3594cd3f2e9f40c10805f8a61c45f08a9a5d9ddea8199267
           ports:
             - containerPort: 5672
             - containerPort: 15672
