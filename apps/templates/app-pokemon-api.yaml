@@ -411,7 +411,6 @@ metadata:
   namespace: pokemon-api
 spec:
   schedule: "40 2 * * *"
-  suspend: true
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 3
