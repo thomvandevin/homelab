@@ -48,6 +48,26 @@ spec:
               mountPath: /dev/shm
             - name: tmp
               mountPath: /tmp
+        # FlareSolverr leaves every request's Chromium profile and component
+        # download dirs in /tmp, which filled the 512Mi volume after ~6.5 days
+        # and crashed a tab. A browser lives for one request (60 s timeout),
+        # so anything older than 30 minutes is dead.
+        - name: tmp-cleanup
+          image: ghcr.io/flaresolverr/flaresolverr:v3.5.2@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - while true; do find /tmp -mindepth 1 -maxdepth 1 -mmin +30 -exec rm -rf {} +; sleep 600; done
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: dshm
           emptyDir:
