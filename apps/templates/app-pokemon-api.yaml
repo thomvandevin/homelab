@@ -191,6 +191,9 @@ spec:
                   key: db-password
             - name: CARD_MIRROR_OVERLAY
               value: "on"
+            # The overlay and image linking read pokemon-api's own rainier schema (cutover 2026-11-07).
+            - name: RAINIER_SOURCE
+              value: rainier
             - name: PTCGL_DB_HOST
               value: postgresql.db-system.svc.cluster.local
             - name: PTCGL_DB_PORT
