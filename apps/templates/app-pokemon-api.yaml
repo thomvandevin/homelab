@@ -49,7 +49,6 @@ metadata:
 data:
   admin-token: {{ .Values.pokemon_api.admin_token | b64enc | quote }}
   portal-secret: {{ .Values.pokemon_api.portal_secret | default "" | b64enc | quote }}
-  admin-password-hash: {{ .Values.pokemon_api.admin_password_hash | default "" | b64enc | quote }}
   ptcgl-reader-password: {{ required "pokemon_api.ptcgl_reader_password is missing from secrets.yaml" .Values.pokemon_api.ptcgl_reader_password | b64enc | quote }}
   db-password: {{ .Values.pokemon_api.db_password | default .Values.db.password | b64enc | quote }}
   # Card images live in the ptcgl RustFS (bucket ptcgl, the keys the mirror wrote), so the job uses its credentials.
@@ -217,11 +216,6 @@ spec:
                 secretKeyRef:
                   name: api-secret
                   key: portal-secret
-            - name: ADMIN_PASSWORD_HASH
-              valueFrom:
-                secretKeyRef:
-                  name: api-secret
-                  key: admin-password-hash
           readinessProbe:
             httpGet:
               path: /v1/health
