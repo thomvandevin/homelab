@@ -1,4 +1,4 @@
-# Nightly dumps of every database except the PTCGL mirror (it re-syncs from Rainier each night) to the RustFS
+# Nightly dumps of every database to the RustFS
 # bucket `backups`, one folder per day, kept for 14 days. Each database is a compressed custom-format dump, so one
 # database can be restored on its own; the roles go along as plain SQL.
 #
@@ -38,7 +38,7 @@ spec:
                   mkdir -p "/backup/$day"
                   echo "$day" > /backup/DAY
                   pg_dumpall --globals-only > "/backup/$day/roles.sql"
-                  for db in $(psql -At -c "SELECT datname FROM pg_database WHERE NOT datistemplate AND datname NOT IN ('postgres', 'ptcgl') ORDER BY 1"); do
+                  for db in $(psql -At -c "SELECT datname FROM pg_database WHERE NOT datistemplate AND datname NOT IN ('postgres') ORDER BY 1"); do
                     pg_dump -Fc -Z 6 "$db" > "/backup/$day/$db.dump"
                     echo "$db: $(du -h "/backup/$day/$db.dump" | cut -f1)"
                   done
