@@ -137,6 +137,8 @@ metadata:
   namespace: ptcgl
 spec:
   schedule: "40 2 * * *"
+  # pokemon-api's rainier-sync job owns the PTCGL login since the 2026-11-07 cutover.
+  suspend: true
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 3
