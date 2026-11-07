@@ -52,8 +52,9 @@ data:
   admin-password-hash: {{ .Values.pokemon_api.admin_password_hash | default "" | b64enc | quote }}
   ptcgl-reader-password: {{ required "pokemon_api.ptcgl_reader_password is missing from secrets.yaml" .Values.pokemon_api.ptcgl_reader_password | b64enc | quote }}
   db-password: {{ .Values.pokemon_api.db_password | default .Values.db.password | b64enc | quote }}
-  rustfs-access-key: {{ required "pokemon_api.rustfs_access_key is missing from secrets.yaml" .Values.pokemon_api.rustfs_access_key | b64enc | quote }}
-  rustfs-secret-key: {{ required "pokemon_api.rustfs_secret_key is missing from secrets.yaml" .Values.pokemon_api.rustfs_secret_key | b64enc | quote }}
+  # Card images live in the ptcgl RustFS (bucket ptcgl, the keys the mirror wrote), so the job uses its credentials.
+  ptcgl-s3-access-key: {{ .Values.ptcgl.s3_access_key | b64enc | quote }}
+  ptcgl-s3-secret-key: {{ .Values.ptcgl.s3_secret_key | b64enc | quote }}
   # The same SOPS seed the mirror used; the job only applies it when its hash differs from the stored login's note.
   ptcs-refresh-token: {{ .Values.pokemon_api.ptcs_refresh_token | b64enc | quote }}
 ---
@@ -399,88 +400,6 @@ spec:
                 limits:
                   memory: 128Mi
 ---
-# -- RustFS (S3-compatible store for card images) ------------------------------
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: rustfs-data
-  namespace: pokemon-api
-spec:
-  accessModes: [ReadWriteOnce]
-  storageClassName: longhorn
-  resources:
-    requests:
-      storage: 40Gi
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rustfs
-  namespace: pokemon-api
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: rustfs
-  template:
-    metadata:
-      labels:
-        app: rustfs
-    spec:
-      {{- include "placement.preferWorkers" . | nindent 6 }}
-      securityContext:
-        fsGroup: 10001
-      containers:
-        - name: rustfs
-          image: rustfs/rustfs:1.0.4@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
-          ports:
-            - containerPort: 9000
-          env:
-            - name: RUSTFS_VOLUMES
-              value: /data
-            - name: RUSTFS_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: api-secret
-                  key: rustfs-access-key
-            - name: RUSTFS_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: api-secret
-                  key: rustfs-secret-key
-          volumeMounts:
-            - name: data
-              mountPath: /data
-          readinessProbe:
-            tcpSocket:
-              port: 9000
-            periodSeconds: 10
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-            limits:
-              memory: 2Gi
-      volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: rustfs-data
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: rustfs
-  namespace: pokemon-api
-spec:
-  selector:
-    app: rustfs
-  ports:
-    - name: api
-      port: 9000
-      targetPort: 9000
----
 # Nightly PTCGL (Rainier) sync: card data and images, run by the pokemon-api jar in job mode.
 apiVersion: batch/v1
 kind: CronJob
@@ -509,20 +428,20 @@ spec:
               command: ["sh", "-c"]
               args:
                 - |
-                  E=http://rustfs.pokemon-api.svc.cluster.local:9000
-                  aws --endpoint-url $E s3api head-bucket --bucket cards 2>/dev/null || aws --endpoint-url $E s3api create-bucket --bucket cards
-                  aws --endpoint-url $E s3api put-bucket-policy --bucket cards --policy '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::cards/decoded/*"]}]}'
+                  E=http://rustfs.ptcgl.svc.cluster.local:9000
+                  aws --endpoint-url $E s3api head-bucket --bucket ptcgl 2>/dev/null || aws --endpoint-url $E s3api create-bucket --bucket ptcgl
+                  aws --endpoint-url $E s3api put-bucket-policy --bucket ptcgl --policy '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::ptcgl/decoded/*"]}]}'
               env:
                 - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
                       name: api-secret
-                      key: rustfs-access-key
+                      key: ptcgl-s3-access-key
                 - name: AWS_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       name: api-secret
-                      key: rustfs-secret-key
+                      key: ptcgl-s3-secret-key
                 - name: AWS_DEFAULT_REGION
                   value: us-east-1
           containers:
@@ -550,19 +469,19 @@ spec:
                       name: api-secret
                       key: ptcs-refresh-token
                 - name: RAINIER_S3_ENDPOINT
-                  value: http://rustfs.pokemon-api.svc.cluster.local:9000
+                  value: http://rustfs.ptcgl.svc.cluster.local:9000
                 - name: RAINIER_S3_BUCKET
-                  value: cards
+                  value: ptcgl
                 - name: RAINIER_S3_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       name: api-secret
-                      key: rustfs-access-key
+                      key: ptcgl-s3-access-key
                 - name: RAINIER_S3_SECRET_KEY
                   valueFrom:
                     secretKeyRef:
                       name: api-secret
-                      key: rustfs-secret-key
+                      key: ptcgl-s3-secret-key
               resources:
                 requests:
                   cpu: 250m
