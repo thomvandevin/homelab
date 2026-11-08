@@ -173,10 +173,6 @@ spec:
                 secretKeyRef:
                   name: api-secret
                   key: db-password
-            - name: CARD_MIRROR_OVERLAY
-              value: "on"
-            - name: CARD_BUILDER
-              value: "on"
             - name: ADMIN_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -435,8 +431,6 @@ spec:
                     secretKeyRef:
                       name: api-secret
                       key: ptcs-refresh-token
-                - name: CARD_BUILDER
-                  value: "on"
                 - name: RAINIER_S3_ENDPOINT
                   value: http://rustfs.ptcgl.svc.cluster.local:9000
                 - name: RAINIER_S3_BUCKET
