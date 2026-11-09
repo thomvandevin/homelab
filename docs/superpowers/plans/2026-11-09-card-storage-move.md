@@ -570,3 +570,7 @@ Run with the session's `pgq` helper: `pgq -d postgres -c "DROP DATABASE ptcgl"` 
 Expected: `DROP DATABASE`; the role query returns nothing or `DROP ROLE`.
 
 - [ ] **Step 4: Memory.** Update `own-dataset.md` and `repos-and-infra.md`: card images in `pokemon-api/rustfs` bucket `cards`, console `pokemon-api-storage`, proxy `pokemon-api/card-images`; backups in `db-system/rustfs-backups` bucket `backups`; the `ptcgl` namespace and database are gone.
+
+## Revision (2026-11-09)
+
+Tasks 1 to 3 for the card store are replaced by the procedure in the spec's Revision section; the backups parts of Tasks 1 to 3 and Tasks 4 and 5 stand, with the bucket name `ptcgl` instead of `cards`.

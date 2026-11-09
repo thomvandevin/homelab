@@ -68,3 +68,12 @@ Homelab only, pushed to main; pokemon-api's code needs no change, since its buck
 
 - Splitting raw bundles from decoded images into separate buckets.
 - Changing image cache headers or URLs.
+
+## Revision (2026-11-09, during execution)
+
+Longhorn could not schedule the new 35 GB card volume: each worker schedules at most 166 GiB (238 GiB less the 72 GiB reserve, no over-provisioning) and already had 161 GiB scheduled. The user chose to re-attach the existing volume after all, with these safeguards:
+
+- The old PV's reclaim policy is set to Retain and a Longhorn snapshot is taken before anything changes.
+- One commit removes the old claim, RustFS and console from `ptcgl` and adds a claim `rustfs-data` in `pokemon-api` bound by `volumeName` to the same PV, with RustFS, the console, the `card-images` proxy and the tunnel route. After Argo prunes the old claim, the PV's `claimRef` is cleared so the new claim binds. Images are down for a few minutes.
+- The bucket keeps its name `ptcgl` (renaming needs a copy, and there is no room); `RAINIER_S3_BUCKET` stays `ptcgl`.
+- The backups move is unchanged: copy to `db-system/rustfs-backups`, switch db-backup. The old `backups` bucket on the card volume is deleted with the user's approval in the removal step.
