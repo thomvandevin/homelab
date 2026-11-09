@@ -531,7 +531,7 @@ Then run a card-data build (`card-data-run.sh` from the session scratchpad); exp
 Run: `kubectl -n pokemon-api get jobs --sort-by=.metadata.creationTimestamp | tail -3; kubectl -n db-system get jobs --sort-by=.metadata.creationTimestamp | tail -2`
 Expected: the newest rainier-sync, baked-assets and db-backup Jobs `Complete`.
 
-Run: `kubectl -n db-system exec deploy/rustfs-backups -- ls /data/backups | tail -2; kubectl -n pokemon-api exec deploy/rustfs -- ls /data/cards/decoded | head -3`
+Run: `kubectl -n db-system exec deploy/rustfs-backups -- ls /data/backups | tail -2; kubectl -n pokemon-api exec deploy/rustfs -- ls /data/ptcgl/decoded | head -3`
 Expected: today's date folder in the backups store; `decoded/` lists its folders in the cards store (RustFS keeps buckets and key prefixes as directories, as the old store did).
 
 - [ ] **Step 2: Restore check.** Copy today's dump out of the new store and restore it into a scratch database:
@@ -548,28 +548,25 @@ Expected: the two counts are equal (the live one may be higher only if a build r
 
 ### Task 5: Remove the old store (after the user approves)
 
-**Files:**
-- Delete: `apps/templates/app-ptcgl.yaml`
-- Modify: `apps/templates/db-backup.yaml` (the `ptcgl` database left the dump list by itself once dropped; nothing to change unless a name list mentions it)
+The card volume `pvc-bc8aab9b-f0c8-4846-9f9d-261d1476030b` is the live card store in `pokemon-api` now. Nothing in this task touches it.
 
-- [ ] **Step 1: Ask the user.** Show Task 4's results and ask to approve deleting the `ptcgl` namespace (RustFS, its 35 GB volume, the old proxy, the console, `ptcgl-secret`) and dropping the empty `ptcgl` database and `ptcgl_reader` role. Stop here until the user says yes.
+- [ ] **Step 1: Ask the user.** Show Task 4's results and ask to approve: deleting the `ptcgl` namespace (only the namespace and `ptcgl-secret` are left), dropping the empty `ptcgl` database and `ptcgl_reader` role, deleting the old `backups` bucket from the card store (about 1.2 GB, copied to `db-system/rustfs-backups`), deleting the Longhorn snapshot `before-card-store-move`, and deleting the manual Job `db-system/copy-backups`. Stop until the user says yes.
 
-- [ ] **Step 2: Delete and push**
+- [ ] **Step 2: Delete the namespace file and push**
 
 ```bash
 git rm apps/templates/app-ptcgl.yaml
 helm template apps apps -f apps/values.yaml -f apps/secrets.yaml > /dev/null && echo ok
-git commit -m "chore(storage): remove the ptcgl namespace; card images and backups have moved"
+git commit -m "chore(storage): remove the ptcgl namespace"
 git push origin HEAD:main
 ```
-Expected: `ok`; after Argo syncs, `kubectl get ns ptcgl` reports NotFound (Argo prunes the namespace and its objects; if the namespace stays, `kubectl delete namespace ptcgl`).
+Expected: `ok`; after Argo syncs, `kubectl get ns ptcgl` reports NotFound. The `ptcgl.*` SOPS keys stay.
 
-- [ ] **Step 3: Drop the database and role**
+- [ ] **Step 3: Drop the database and role**: `pgq -d postgres -c "DROP DATABASE ptcgl"`, then `DROP ROLE ptcgl_reader` if `SELECT 1 FROM pg_roles WHERE rolname='ptcgl_reader'` returns a row.
 
-Run with the session's `pgq` helper: `pgq -d postgres -c "DROP DATABASE ptcgl"` and, if `SELECT 1 FROM pg_roles WHERE rolname='ptcgl_reader'` returns a row, `pgq -d postgres -c "DROP ROLE ptcgl_reader"`.
-Expected: `DROP DATABASE`; the role query returns nothing or `DROP ROLE`.
+- [ ] **Step 4: Clean up the card store and the cluster**: delete the `backups` bucket on `rustfs.pokemon-api` (`aws s3 rb s3://backups --force` from a pod with `api-secret` keys), `kubectl -n longhorn-system delete snapshots.longhorn.io before-card-store-move`, `kubectl -n db-system delete job copy-backups`.
 
-- [ ] **Step 4: Memory.** Update `own-dataset.md` and `repos-and-infra.md`: card images in `pokemon-api/rustfs` bucket `cards`, console `pokemon-api-storage`, proxy `pokemon-api/card-images`; backups in `db-system/rustfs-backups` bucket `backups`; the `ptcgl` namespace and database are gone.
+- [ ] **Step 5: Memory.** Update `own-dataset.md` and `repos-and-infra.md`: card images in `pokemon-api/rustfs` bucket `ptcgl` (re-attached PV, Retain, claim protected from prune), console `pokemon-api-storage`, proxy `pokemon-api/card-images`; backups in `db-system/rustfs-backups` bucket `backups`; the `ptcgl` namespace and database are gone. Add the claimRef rebinding procedure to `gotchas.md`.
 
 ## Revision (2026-11-09)
 

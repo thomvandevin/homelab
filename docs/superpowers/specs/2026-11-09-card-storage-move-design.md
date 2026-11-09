@@ -40,11 +40,11 @@ A one-off Job per bucket runs the aws CLI with `s3 sync` from the old store to t
 
 ### Remove the old store
 
-After one full night on the new stores, with rainier-sync, baked-assets and db-backup all succeeding and images served from `card-images`, the user is asked to approve the removal. Then `app-ptcgl.yaml` is deleted (namespace, RustFS, volume, nginx, console, secret), the empty `ptcgl` database and the `ptcgl_reader` role are dropped, and the `ptcgl.*` SOPS keys can be removed by the user.
+After one full night on the new stores, with rainier-sync, baked-assets and db-backup all succeeding and images served from `card-images`, the user is asked to approve the removal. Then `app-ptcgl.yaml` is deleted (by then only the namespace and `ptcgl-secret`), the empty `ptcgl` database and the `ptcgl_reader` role are dropped. The `ptcgl.*` SOPS keys stay: `api-secret` and `db-backup-s3` read them, and removing them would start both stores with empty credentials.
 
 ## Errors and safety
 
-- Nothing is deleted before the user approves; until then switching back is reverting one homelab commit.
+- Nothing is deleted before the user approves. Rollback after the revision is not a plain revert: revert the switch commit, add `volumeName: pvc-bc8aab9b-f0c8-4846-9f9d-261d1476030b` to the `ptcgl/rustfs-data` claim, and clear the PV's `claimRef` once the `pokemon-api` claim is gone (without `volumeName`, Longhorn would try to provision a new 35 GB volume it cannot schedule).
 - A copy with a different count or size stops the switch.
 - Images keep serving from the old proxy until the tunnel route changes; the route change and the pokemon-api env change ship in one commit.
 - Backups for the night of the switch: the backup job writes to whichever store its config names at 03:00; the switch commit lands outside 02:40 to 08:00.

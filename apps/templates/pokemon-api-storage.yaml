@@ -5,6 +5,10 @@ kind: PersistentVolumeClaim
 metadata:
   name: rustfs-data
   namespace: pokemon-api
+  annotations:
+    # A pruned claim would leave the volume Released with a stale claimRef; a new claim then stays Pending until the
+    # claimRef is cleared by hand. Keep Argo from ever deleting it.
+    argocd.argoproj.io/sync-options: Delete=false,Prune=false
 spec:
   accessModes: [ReadWriteOnce]
   storageClassName: longhorn
@@ -131,11 +135,13 @@ data:
         proxy_pass http://rustfs.pokemon-api.svc.cluster.local:9000/ptcgl/;
         proxy_set_header Host rustfs.pokemon-api.svc.cluster.local:9000;
         proxy_hide_header Set-Cookie;
+        # RustFS stores the decoded objects without a useful content type; the map above sets it from the extension.
         proxy_hide_header Content-Type;
         proxy_hide_header Server;
         proxy_hide_header x-amz-request-id;
         proxy_hide_header x-amz-id-2;
         proxy_hide_header x-request-id;
+        # RustFS error bodies name the bucket and key; the public only sees a status.
         proxy_intercept_errors on;
         error_page 403 404 = @missing;
         error_page 500 502 503 504 = @unavailable;
