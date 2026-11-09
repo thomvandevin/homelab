@@ -53,6 +53,9 @@ data:
   # Card images live in the ptcgl RustFS (bucket ptcgl, the keys the mirror wrote), so the job uses its credentials.
   ptcgl-s3-access-key: {{ .Values.ptcgl.s3_access_key | b64enc | quote }}
   ptcgl-s3-secret-key: {{ .Values.ptcgl.s3_secret_key | b64enc | quote }}
+  # pokemon-api's own RustFS (pokemon-api-storage.yaml); the values are the keys the old ptcgl store used.
+  s3-access-key: {{ .Values.ptcgl.s3_access_key | b64enc | quote }}
+  s3-secret-key: {{ .Values.ptcgl.s3_secret_key | b64enc | quote }}
   # The same SOPS seed the mirror used; the job only applies it when its hash differs from the stored login's note.
   ptcs-refresh-token: {{ .Values.pokemon_api.ptcs_refresh_token | b64enc | quote }}
 ---

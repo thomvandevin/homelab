@@ -1,0 +1,82 @@
+# The nightly database dumps (bucket `backups`), kept next to Postgres and the db-backup job. Restores use the aws cli;
+# see db-backup.yaml.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rustfs-backups-data
+  namespace: db-system
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs-backups
+  namespace: db-system
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rustfs-backups
+  template:
+    metadata:
+      labels:
+        app: rustfs-backups
+    spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:1.0.4@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
+          ports:
+            - containerPort: 9000
+          env:
+            - name: RUSTFS_VOLUMES
+              value: /data
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: db-backup-s3
+                  key: access-key
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: db-backup-s3
+                  key: secret-key
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rustfs-backups-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs-backups
+  namespace: db-system
+spec:
+  selector:
+    app: rustfs-backups
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
