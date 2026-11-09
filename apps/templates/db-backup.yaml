@@ -3,11 +3,12 @@
 # database can be restored on its own; the roles go along as plain SQL.
 #
 # Restore one database into a scratch copy (from any pod with psql and the aws cli, or in two steps):
-#   aws --endpoint-url http://rustfs.ptcgl.svc.cluster.local:9000 s3 cp s3://backups/2026-10-11/pokemon_api.dump /tmp/
+#   aws --endpoint-url http://rustfs-backups.db-system.svc.cluster.local:9000 s3 cp s3://backups/2026-10-11/pokemon_api.dump /tmp/
 #   createdb -h postgresql.db-system.svc.cluster.local -U postgres pokemon_api_restore
 #   pg_restore -h postgresql.db-system.svc.cluster.local -U postgres -d pokemon_api_restore --no-owner /tmp/pokemon_api.dump
 # Checked on 2026-10-10: pokemon_api restored from the first backup into a scratch database, all 15 tables with the same
 # row counts as the live database (cards 21,329, rulings 1,838, card_legality 41,837).
+# Since 2026-11-09 the dumps live in rustfs-backups in db-system; older days were copied over from the ptcgl store.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -58,7 +59,7 @@ spec:
               args:
                 - |
                   set -eu
-                  E=http://rustfs.ptcgl.svc.cluster.local:9000
+                  E=http://rustfs-backups.db-system.svc.cluster.local:9000
                   day=$(cat /backup/DAY)
                   old=$(date -u -d "$day -14 days" +%F)
                   aws --endpoint-url $E s3api head-bucket --bucket backups 2>/dev/null || aws --endpoint-url $E s3api create-bucket --bucket backups
@@ -92,7 +93,7 @@ spec:
               emptyDir:
                 sizeLimit: 4Gi
 ---
-# RustFS lives in the ptcgl namespace; the dump job needs its keys here.
+# The keys of the backups store (db-backup-storage.yaml).
 apiVersion: v1
 kind: Secret
 type: Opaque
