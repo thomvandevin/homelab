@@ -85,7 +85,7 @@ spec:
               service: http://chat-ui.pokemon-ai.svc.cluster.local:80
             - hostname: pokemon-api.thomvandev.in
               path: ^/images/
-              service: http://ptcgl-assets.ptcgl.svc.cluster.local:80
+              service: http://card-images.pokemon-api.svc.cluster.local:80
             - hostname: pokemon-api.thomvandev.in
               service: http://pokemon-api.pokemon-api.svc.cluster.local:8080
             # Decklist

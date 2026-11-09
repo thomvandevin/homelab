@@ -1,0 +1,195 @@
+# Card images, set art, icons and the raw PTCGL bundles they are decoded from (bucket `ptcgl`, named after the mirror
+# that started it). The /images/ proxy (card-images) serves `decoded/` publicly; everything else stays in the cluster.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rustfs-data
+  namespace: pokemon-api
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn
+  # The Longhorn volume the store had in the ptcgl namespace, re-attached rather than copied (Longhorn had no room for
+  # a second copy). Its reclaim policy is Retain.
+  volumeName: pvc-bc8aab9b-f0c8-4846-9f9d-261d1476030b
+  resources:
+    requests:
+      storage: 35Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs
+  namespace: pokemon-api
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rustfs
+  template:
+    metadata:
+      labels:
+        app: rustfs
+    spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:1.0.4@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          env:
+            - name: RUSTFS_VOLUMES
+              value: /data
+            - name: RUSTFS_CONSOLE_ENABLE
+              value: "true"
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: s3-access-key
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: s3-secret-key
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rustfs-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs
+  namespace: pokemon-api
+spec:
+  selector:
+    app: rustfs
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pokemon-api-storage
+  namespace: pokemon-api
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: rustfs
+                port:
+                  number: 9001
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - pokemon-api-storage
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: card-images-nginx
+  namespace: pokemon-api
+data:
+  default.conf: |
+    map $uri $asset_type {
+      ~*\.png$  image/png;
+      ~*\.json$ application/json;
+      default    application/octet-stream;
+    }
+    server {
+      listen 80;
+      server_tokens off;
+      location /images/ {
+        limit_except GET { deny all; }
+        proxy_pass http://rustfs.pokemon-api.svc.cluster.local:9000/ptcgl/;
+        proxy_set_header Host rustfs.pokemon-api.svc.cluster.local:9000;
+        proxy_hide_header Set-Cookie;
+        proxy_hide_header Content-Type;
+        proxy_hide_header Server;
+        proxy_hide_header x-amz-request-id;
+        proxy_hide_header x-amz-id-2;
+        proxy_hide_header x-request-id;
+        proxy_intercept_errors on;
+        error_page 403 404 = @missing;
+        error_page 500 502 503 504 = @unavailable;
+        add_header Content-Type $asset_type;
+        add_header Cache-Control "public, max-age=604800";
+      }
+      location @missing { return 404; }
+      location @unavailable { return 502; }
+      location / { return 404; }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: card-images
+  namespace: pokemon-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: card-images
+  template:
+    metadata:
+      labels:
+        app: card-images
+    spec:
+      {{- include "placement.preferWorkers" . | nindent 6 }}
+      containers:
+        - name: nginx
+          image: nginx:1.31-alpine@sha256:713fc2ebfd92e8217db451477182ee91944b123d2b1ee9fd5a8c6e91ca6c3a11
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/nginx/conf.d
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+      volumes:
+        - name: conf
+          configMap:
+            name: card-images-nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: card-images
+  namespace: pokemon-api
+spec:
+  selector:
+    app: card-images
+  ports:
+    - port: 80
+      targetPort: 80
