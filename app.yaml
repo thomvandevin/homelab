@@ -5,9 +5,31 @@ metadata:
   namespace: argocd
 spec:
   project: default
+  # CI sets these images to the commit it built; git only holds the bootstrap :latest.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      namespace: pokemon-api
+      name: pokemon-api
+      jqPathExpressions:
+        - .spec.template.spec.containers[] | select(.name == "pokemon-api") | .image
+    - group: apps
+      kind: Deployment
+      namespace: pokemon-ai
+      name: chat-api
+      jqPathExpressions:
+        - .spec.template.spec.containers[] | select(.name == "chat-api") | .image
+    - group: apps
+      kind: Deployment
+      namespace: pokemon-ai
+      name: chat-ui
+      jqPathExpressions:
+        - .spec.template.spec.containers[] | select(.name == "chat-ui") | .image
   syncPolicy:
     automated:
       prune: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
   destination:
     server: https://kubernetes.default.svc
   source:
