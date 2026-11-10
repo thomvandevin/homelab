@@ -51,6 +51,9 @@ spec:
           # moved replicas) filled homelab-2 past the 25% free minimum, so no
           # replica could be rebuilt there and three volumes ran on one copy
           orphanResourceAutoDeletion: replica-data;instance
+          # at 100% each worker could schedule only 166 GiB (238 GiB less the 72 GiB reserve) while its volumes,
+          # thin as they are, held well under half of that; the 25% free minimum still stops scheduling on a full disk
+          storageOverProvisioningPercentage: 150
   destination:
     namespace: longhorn-system
     server: https://kubernetes.default.svc
