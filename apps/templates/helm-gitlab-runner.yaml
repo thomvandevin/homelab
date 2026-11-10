@@ -49,6 +49,10 @@ spec:
               endpoint=http://rustfs.closet.svc.cluster.local:9000
               aws --endpoint-url "$endpoint" s3api head-bucket --bucket gitlab-runner-cache \
                 || aws --endpoint-url "$endpoint" s3 mb s3://gitlab-runner-cache
+              # Every branch keeps its own cache and nothing else removes it; unexpired, it filled closet's volume.
+              # A job rewrites its cache, so only branches idle for a week lose theirs.
+              aws --endpoint-url "$endpoint" s3api put-bucket-lifecycle-configuration --bucket gitlab-runner-cache \
+                --lifecycle-configuration '{"Rules":[{"ID":"expire-stale-cache","Status":"Enabled","Filter":{"Prefix":""},"Expiration":{"Days":7}}]}'
           env:
             - name: ACCESS_KEY
               valueFrom:
