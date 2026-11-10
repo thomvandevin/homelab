@@ -43,6 +43,26 @@ spec:
                     pg_dump -Fc -Z 6 "$db" > "/backup/$day/$db.dump"
                     echo "$db: $(du -h "/backup/$day/$db.dump" | cut -f1)"
                   done
+{{- if and .Values.db_backup .Values.db_backup.r2_access_key }}
+                  # The off-site copy holds only data people made: scraped and downloaded data can be fetched again,
+                  # so the tournament archive and scraper_db stay out, and pokemon_api goes without its card, price
+                  # and PTCGL rows (keys, requests, aliases, accepts, pins and set codes stay).
+                  mkdir -p /backup/offsite
+                  cp "/backup/$day/roles.sql" /backup/offsite/
+                  for db in pokemon_ai closet pokemon_checkout pokemon_notifications pokemon_portal slowpoke_bingo_db; do
+                    cp "/backup/$day/$db.dump" /backup/offsite/ || echo "off-site: no dump for $db"
+                  done
+                  pg_dump -Fc -Z 6 \
+                    --exclude-table-data='public.cards' --exclude-table-data='public.sets' --exclude-table-data='public.set_art' \
+                    --exclude-table-data='public.rulings' --exclude-table-data='public.card_legality' \
+                    --exclude-table-data='public.cardmarket_prices' --exclude-table-data='public.price_guide' \
+                    --exclude-table-data='public.card_data_diffs' --exclude-table-data='public.card_data_unmatched' \
+                    --exclude-table-data='public.baked_icons' --exclude-table-data='public.cardmarket_expansions' --exclude-table-data='cardmarket.*' \
+                    --exclude-table-data='rainier.cards' --exclude-table-data='rainier.card_attacks' --exclude-table-data='rainier.assets' \
+                    --exclude-table-data='rainier.sets' --exclude-table-data='rainier.rarities' --exclude-table-data='tcgdex.*' \
+                    pokemon_api > /backup/offsite/pokemon_api.dump
+                  echo "off-site: $(du -sh /backup/offsite | cut -f1)"
+{{- end }}
               env:
                 - name: PGPASSWORD
                   valueFrom:
@@ -53,6 +73,47 @@ spec:
                 - name: backup
                   mountPath: /backup
           containers:
+{{- if and .Values.db_backup .Values.db_backup.r2_access_key }}
+            # Cloudflare R2 bucket, kept under its free 10 GB: R2's own lifecycle rule deletes objects after 14 days,
+            # this job removes the 15-day-old folder and refuses to upload once the bucket holds 9 GB.
+            - name: offsite
+              image: amazon/aws-cli:2.39.6@sha256:eccdb3ec77e159d43ca6a750a70738c546883138be7f094498294a1477ec7e42
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  E={{ .Values.db_backup.r2_endpoint | quote }}
+                  B={{ .Values.db_backup.r2_bucket | quote }}
+                  day=$(cat /backup/DAY)
+                  used=$(aws --endpoint-url "$E" s3 ls --recursive --summarize "s3://$B/" | awk '/Total Size/ {print $3}')
+                  if [ "${used:-0}" -gt 9000000000 ]; then echo "off-site bucket holds $used bytes, over the 9 GB cap; not uploading"; exit 1; fi
+                  aws --endpoint-url "$E" s3 cp --recursive --only-show-errors /backup/offsite "s3://$B/$day/"
+                  old=$(date -u -d "$day -15 days" +%F)
+                  aws --endpoint-url "$E" s3 rm --recursive --only-show-errors "s3://$B/$old/" || true
+                  echo "off-site uploaded $day ($(du -sh /backup/offsite | cut -f1)), bucket held ${used:-0} bytes before"
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-backup-r2
+                      key: access-key
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-backup-r2
+                      key: secret-key
+                - name: AWS_DEFAULT_REGION
+                  value: auto
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+{{- end }}
             - name: upload
               image: amazon/aws-cli:2.39.7@sha256:bba262340b0bc7cbf3a8a48612531263b56f4b280c4f036a07816af1b271bda0
               command: ["sh", "-c"]
@@ -103,3 +164,15 @@ metadata:
 data:
   access-key: {{ .Values.ptcgl.s3_access_key | b64enc | quote }}
   secret-key: {{ .Values.ptcgl.s3_secret_key | b64enc | quote }}
+{{- if and .Values.db_backup .Values.db_backup.r2_access_key }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: db-backup-r2
+  namespace: db-system
+data:
+  access-key: {{ .Values.db_backup.r2_access_key | b64enc | quote }}
+  secret-key: {{ .Values.db_backup.r2_secret_key | b64enc | quote }}
+{{- end }}
