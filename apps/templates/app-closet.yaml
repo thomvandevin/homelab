@@ -499,7 +499,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: rclone
-              image: rclone/rclone:1.75.2
+              image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
               args: ["copy", "--fast-list", "--stats-one-line", "--stats=0", "-v", "rustfs:closet", "r2:{{ .Values.db_backup.r2_bucket }}/closet-photos"]
               env:
                 - name: RCLONE_CONFIG_RUSTFS_TYPE
