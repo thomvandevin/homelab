@@ -464,3 +464,85 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
+{{- if and .Values.db_backup .Values.db_backup.r2_access_key }}
+---
+# Photos and renders, off-site next to the database dumps that point at them. Copy, never sync: a delete here
+# must not reach the backup. The bucket's 14-day lifecycle rule expires every copy, so each object is uploaded again
+# the night after it expires, and a photo deleted here stays recoverable for up to 14 days.
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: photo-backup-r2
+  namespace: closet
+data:
+  access-key: {{ .Values.db_backup.r2_access_key | b64enc | quote }}
+  secret-key: {{ .Values.db_backup.r2_secret_key | b64enc | quote }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: photo-backup
+  namespace: closet
+spec:
+  schedule: "30 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          {{- include "placement.preferWorkers" . | nindent 10 }}
+          restartPolicy: Never
+          containers:
+            - name: rclone
+              image: rclone/rclone:1.75.2
+              args: ["copy", "--fast-list", "--stats-one-line", "--stats=0", "-v", "rustfs:closet", "r2:{{ .Values.db_backup.r2_bucket }}/closet-photos"]
+              env:
+                - name: RCLONE_CONFIG_RUSTFS_TYPE
+                  value: s3
+                - name: RCLONE_CONFIG_RUSTFS_PROVIDER
+                  value: Other
+                - name: RCLONE_CONFIG_RUSTFS_ENDPOINT
+                  value: http://rustfs.closet.svc.cluster.local:9000
+                - name: RCLONE_CONFIG_RUSTFS_FORCE_PATH_STYLE
+                  value: "true"
+                - name: RCLONE_CONFIG_RUSTFS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: app-secret
+                      key: minio-access-key
+                - name: RCLONE_CONFIG_RUSTFS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: app-secret
+                      key: minio-secret-key
+                - name: RCLONE_CONFIG_R2_TYPE
+                  value: s3
+                - name: RCLONE_CONFIG_R2_PROVIDER
+                  value: Cloudflare
+                - name: RCLONE_CONFIG_R2_ENDPOINT
+                  value: {{ .Values.db_backup.r2_endpoint | quote }}
+                # the R2 token is scoped to objects; rclone would otherwise try to create the bucket
+                - name: RCLONE_CONFIG_R2_NO_CHECK_BUCKET
+                  value: "true"
+                - name: RCLONE_CONFIG_R2_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: photo-backup-r2
+                      key: access-key
+                - name: RCLONE_CONFIG_R2_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: photo-backup-r2
+                      key: secret-key
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+{{- end }}
