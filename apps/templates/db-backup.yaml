@@ -77,7 +77,7 @@ spec:
             # Cloudflare R2 bucket, kept under its free 10 GB: R2's own lifecycle rule deletes objects after 14 days,
             # this job removes the 15-day-old folder and refuses to upload once the bucket holds 9 GB.
             - name: offsite
-              image: amazon/aws-cli:2.40.1@sha256:4ade0fe3e60e0b9e1fb0910f86c6d992baf4e12d3172c25a3c8c11f6c81cee08
+              image: amazon/aws-cli:2.40.2@sha256:acc32af784911165a8e78b63950625d174ba79b800a66a436c974689c87cd755
               command: ["sh", "-c"]
               args:
                 - |
@@ -115,7 +115,7 @@ spec:
                   memory: 256Mi
 {{- end }}
             - name: upload
-              image: amazon/aws-cli:2.40.1@sha256:4ade0fe3e60e0b9e1fb0910f86c6d992baf4e12d3172c25a3c8c11f6c81cee08
+              image: amazon/aws-cli:2.40.2@sha256:acc32af784911165a8e78b63950625d174ba79b800a66a436c974689c87cd755
               command: ["sh", "-c"]
               args:
                 - |
