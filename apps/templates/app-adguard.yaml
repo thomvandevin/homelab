@@ -152,7 +152,7 @@ spec:
         # Secret. Static leases come from git and win over the persisted file; dynamic
         # leases that clash with a static MAC or IP are dropped.
         - name: config
-          image: alpine/k8s:1.37.2@sha256:dcb7185e112a453aa72f426754849a97357727ef8f40168fb208c8cf59952042
+          image: alpine/k8s:1.37.2@sha256:7a82aeefea3d554a43a8676b137f2b88bae6c1fe11c13862b191b3a086cc28c0
           command:
             - sh
             - -ec
