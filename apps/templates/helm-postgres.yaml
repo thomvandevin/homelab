@@ -40,10 +40,14 @@ spec:
                         values: ["worker"]
           resources:
             limits:
-              memory: 1Gi
+              memory: 1536Mi
             requests:
               cpu: 50m
               memory: 512Mi
+          # The default 128MB let the meta archive's recent decks fall out of cache overnight; cold queries hit the 10s timeout.
+          extendedConfiguration: |
+            shared_buffers = 512MB
+            effective_cache_size = 1GB
         image:
           # Broadcom pulled the versioned tags from docker.io/bitnami in Aug 2025 and
           # moved them to bitnamilegacy; only :latest remains under bitnami. The old
