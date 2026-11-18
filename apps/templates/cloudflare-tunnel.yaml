@@ -122,6 +122,9 @@ spec:
             # Navidrome
             - hostname: navidrome.thomvandev.in
               service: http://192.168.178.20:4533
+            # Audiobookshelf
+            - hostname: audiobookshelf.thomvandev.in
+              service: http://192.168.178.20:13378
             # Sharry
             - hostname: sharry.thomvandev.in
               service: http://sharry.sharry.svc.cluster.local:9090
