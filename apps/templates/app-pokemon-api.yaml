@@ -185,11 +185,17 @@ spec:
                 secretKeyRef:
                   name: api-secret
                   key: portal-secret
+          # Up to 90 s to start; readiness takes over the moment the app answers
+          startupProbe:
+            httpGet:
+              path: /v1/health
+              port: 8080
+            periodSeconds: 3
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /v1/health
               port: 8080
-            initialDelaySeconds: 20
             periodSeconds: 10
           resources:
             requests:
