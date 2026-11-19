@@ -164,6 +164,19 @@ spec:
                   key: pokemon-api-key
             - name: CHAT_MODEL
               value: anthropic/claude-sonnet-5.5
+          # No liveness probe: /api/health includes the database, so a database
+          # blip would restart the pod
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 3
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 10
           resources:
             requests:
               cpu: 20m
