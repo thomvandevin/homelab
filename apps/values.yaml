@@ -39,6 +39,9 @@ workspace:
       repo: pokemon-bot
       cron: "31 * * * *"
       prompt: monitoring/scrape-health.md
+      # Claude only starts when this check's output changed, or every sweep hours
+      check: monitoring/check.sh
+      sweep: 6
       allow:
         - Bash(monitoring/scrape_health.sh)
         - Bash(./monitoring/scrape_health.sh)
