@@ -2,9 +2,14 @@
 
 Standing request from the owner: when the homelab reports a problem, find out
 what is wrong and prepare the fix, so the owner only has to approve it from
-the phone. This runs unattended every 10 minutes from the homelab workspace
+the phone. This runs unattended every 15 minutes from the homelab workspace
 (`workspace.schedules` in this repo), but only when `monitoring/check.sh`
 reports something new.
+
+If the run's instructions below say nothing about a pre-check, the workspace is
+still on a run-schedule that ignores `check`: end at once with the outcome
+"healthy (waiting for the workspace to update)" and do nothing else, so these
+runs stay short until it does.
 
 What the check reports, one line each:
 

@@ -57,7 +57,7 @@ workspace:
         - Bash(git push:*)
     homelab-triage:
       repo: homelab
-      cron: "3-59/10 * * * *"
+      cron: "3-59/15 * * * *"
       prompt: monitoring/triage.md
       check: monitoring/check.sh
       sweep: 24
