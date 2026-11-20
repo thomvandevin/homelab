@@ -49,10 +49,32 @@ workspace:
         - Bash(./monitoring/psql.sh:*)
         - Bash(monitoring/merge_seq.sh:*)
         - Bash(./monitoring/merge_seq.sh:*)
+        - Bash(monitoring/retry_delivery.sh:*)
+        - Bash(./monitoring/retry_delivery.sh:*)
         - Bash(kubectl -n pokemon-bot:*)
         - Bash(glab mr:*)
         - Bash(glab api:*)
         - Bash(git push:*)
+    homelab-triage:
+      repo: homelab
+      cron: "3-59/10 * * * *"
+      prompt: monitoring/triage.md
+      check: monitoring/check.sh
+      sweep: 24
+      allow:
+        - Bash(kubectl get:*)
+        - Bash(kubectl describe:*)
+        - Bash(kubectl logs:*)
+        - Bash(kubectl top:*)
+        - Bash(gh pr:*)
+        - Bash(glab api:*)
+        - Bash(glab mr:*)
+        - Bash(git push:*)
+        - mcp__claude_ai_home-assistant_MCP__homeassistant__GetLiveContext
+        - mcp__claude_ai_home-assistant_MCP__history__get_history
+        - mcp__claude_ai_home-assistant_MCP__system_health__get_system_info
+        - mcp__claude_ai_home-assistant_MCP__system_log__get_entries
+        - mcp__claude_ai_home-assistant_MCP__search__search
   # Included by ~/.ssh/config in the workspace; changes apply live
   sshConfig: |
     Host homelab-media
