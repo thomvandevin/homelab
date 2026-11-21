@@ -218,6 +218,10 @@
     enable = true;
     name = "iqn.2016-04.com.open-iscsi:${meta.hostname}";
   };
+  # Longhorn volumes run over iscsid's live sessions: restarting it in a switch
+  # drops them and races iscsid.socket, which then fails the switch. A new
+  # iscsid takes effect on the next reboot.
+  systemd.services.iscsid.restartIfChanged = false;
 
   # Define a user account. Don't forget to set a password with 'passwd'.
   users.users.homelab = {
