@@ -80,7 +80,7 @@ dhcp:
     # AdGuard first, then a public server so names keep working without homelab-0
     options:
       - 6 ips {{ .Values.adguard.ip }},9.9.9.9
-schema_version: 34
+schema_version: 35
 {{- end }}
 {{- define "adguard.staticLeases" -}}
 {{- $leases := list
