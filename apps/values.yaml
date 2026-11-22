@@ -70,6 +70,15 @@ workspace:
         - Bash(glab api:*)
         - Bash(glab mr:*)
         - Bash(git push:*)
+    home-assistant-weekly:
+      repo: home-assistant
+      # Hourly on Monday from 09:07 so a missed tick catches up; the check
+      # changes once a week, so Claude starts once
+      cron: "7 9-21 * * 1"
+      prompt: monitoring/weekly-check.md
+      check: 'echo "home assistant weekly check $(date +%G-W%V)"'
+      sweep: 168
+      allow:
         - mcp__claude_ai_home-assistant_MCP__homeassistant__GetLiveContext
         - mcp__claude_ai_home-assistant_MCP__history__get_history
         - mcp__claude_ai_home-assistant_MCP__system_health__get_system_info

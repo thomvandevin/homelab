@@ -18,7 +18,8 @@ What the check reports, one line each:
   show up here.
 - `crashloop <ns>/<pod> <uid>`: a container restarted 3+ times and is backing off.
 - `node <name> notready`, `volume <ns>/<pvc> full` (85%+), `dns adguard down`.
-- `home assistant weekly check <week>`: once a week, Monday after 09:00.
+
+The weekly Home Assistant check is its own schedule in the home-assistant repo.
 
 For each new line (compare with your notes; a line you already handled needs
 nothing unless it changed):
@@ -39,12 +40,6 @@ nothing unless it changed):
    to run. Never merge, never `kubectl apply` or delete anything (ArgoCD owns
    the cluster state), never touch volumes, PVCs, secrets or the `nixos/` tree
    on your own.
-4. Home Assistant weekly check: read Home Assistant through the
-   `home-assistant` connector, read tools only (live context, history, system
-   health, system log): devices unavailable for a day or more, batteries under
-   25%, pending updates, the age of the last backup. Propose what is worth
-   doing (an update, a device to look at); change nothing. If the connector or
-   those sensors are not available in this run, say so in the outcome.
-5. A resolved problem disappears from the check by itself; note it as resolved.
+4. A resolved problem disappears from the check by itself; note it as resolved.
 
 No emdashes. No AI attribution in commits, PRs or MRs.
