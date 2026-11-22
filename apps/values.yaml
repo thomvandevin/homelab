@@ -79,6 +79,9 @@ workspace:
       check: 'echo "home assistant weekly check $(date +%G-W%V)"'
       sweep: 168
       allow:
+        # Read-only: which LAN devices hold a DHCP lease (the W47 check blamed Tuya
+        # for plugs that simply had none)
+        - Bash(kubectl -n adguard exec deploy/adguard -c adguard -- cat /opt/adguardhome/work/data/leases.json)
         - mcp__claude_ai_home-assistant_MCP__homeassistant__GetLiveContext
         - mcp__claude_ai_home-assistant_MCP__history__get_history
         - mcp__claude_ai_home-assistant_MCP__system_health__get_system_info
