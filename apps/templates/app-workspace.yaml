@@ -151,9 +151,13 @@ spec:
               containerPort: 8080
             - name: status
               containerPort: 8090
+            - name: proposals
+              containerPort: 8091
           env:
             - name: GIT_USER_NAME
               value: {{ .Values.workspace.gitUserName | quote }}
+            - name: PROPOSALS_URL
+              value: https://proposals.snowy-gorgon.ts.net
             - name: RC_SPAWN
               value: {{ .Values.workspace.spawn | quote }}
           envFrom:
@@ -223,6 +227,8 @@ spec:
       ports:
         - port: 2222
         - port: 8080
+        # Proposals page: one tap carries out a scheduled run's proposal
+        - port: 8091
     # Read-only session status for the dashboard
     - from:
         - namespaceSelector:
@@ -284,6 +290,42 @@ spec:
   tls:
     - hosts:
         - code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proposals
+  namespace: workspace
+spec:
+  type: ClusterIP
+  selector:
+    app: workspace
+  ports:
+    - name: http
+      port: 80
+      targetPort: proposals
+---
+# -- Tailscale Ingress (internal only) ----------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: proposals
+  namespace: workspace
+spec:
+  ingressClassName: tailscale
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: proposals
+                port:
+                  number: 80
+            path: "/"
+            pathType: Prefix
+  tls:
+    - hosts:
+        - proposals
 ---
 apiVersion: v1
 kind: Service
