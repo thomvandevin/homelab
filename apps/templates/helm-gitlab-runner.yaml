@@ -116,7 +116,7 @@ spec:
   source:
     repoURL: https://charts.gitlab.io
     chart: gitlab-runner
-    targetRevision: 0.95.0
+    targetRevision: 0.95.1
     helm:
       valuesObject:
         affinity:
