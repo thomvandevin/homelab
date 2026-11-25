@@ -127,7 +127,7 @@ spec:
       {{- include "placement.preferWorkers" . | nindent 6 }}
       containers:
         - name: reposilite
-          image: dzikoysk/reposilite:3.6.7@sha256:eee5c8fe3b72254c464a4cf04a0d54ae7aa6c759493ffe252d085f30ee45c5c8
+          image: dzikoysk/reposilite:3.6.8@sha256:89c331f3b0655fe8cb2825f524e433cb8f772f7683fc6f3c2ab32dcd90bcebd0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
