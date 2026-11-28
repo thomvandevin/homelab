@@ -50,7 +50,7 @@ spec:
       {{- include "placement.preferWorkers" . | nindent 6 }}
       containers:
         - name: nginx
-          image: nginx:1.31@sha256:c35c59a6a083b2557aaf6e0740b2f4f9fe0e0226544e121498a67d2ec4d14ac9
+          image: nginx:1.31@sha256:6a3df739b6312289e87d70947d900669c1b3087474ece5814b9c01bbf2e6dde3
           resources:
             requests:
               cpu: 5m
