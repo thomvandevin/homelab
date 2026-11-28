@@ -41,7 +41,7 @@ spec:
       containers:
         # The minio/mc image is not publicly pullable; the AWS CLI speaks S3 to RustFS just as well.
         - name: aws
-          image: amazon/aws-cli:2.42.2@sha256:6c24ad4e8cdf12defd41c7e6d2ed836e73da9cbfecc1e9d7fd148bb9f4ea5eb2
+          image: amazon/aws-cli:2.42.5@sha256:4e569d37c0b93893f660946f9b00a442b1172b1c4ba86338a3a1af3937ed62b5
           command: ["sh", "-c"]
           args:
             - |
