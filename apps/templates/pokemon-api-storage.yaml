@@ -17,7 +17,7 @@ spec:
   volumeName: pvc-bc8aab9b-f0c8-4846-9f9d-261d1476030b
   resources:
     requests:
-      storage: 45Gi
+      storage: 50Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
